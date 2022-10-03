@@ -6,7 +6,7 @@ Created on Sun Oct  2 17:29:52 2022
 @author: mischasch
 """
 from collections.abc import Iterable
-import pandas as pd, numpy as np
+import pandas as pd, numpy as np, reseng_2101 as res
 
 class survey():
     '''
@@ -144,13 +144,13 @@ class casing_design():
         Parameters
         ----------
         ls : np.array
-            Length of each casing section from Top Reservoir to surface (ascending)
-        ids : TYPE, optional
-            DESCRIPTION. The default is None.
-        ods : TYPE, optional
-            DESCRIPTION. The default is None.
-        wgs : TYPE, optional
-            DESCRIPTION. The default is None.
+            Length of each casing section from Top Reservoir to surface (ascending) [m]
+        ids : array of floats, optional
+            inner diameters in inch (e.g. 6.625). The default is None.
+        ods : array of floats, optional
+            outer diameters in inch (e.g. 6.625). The default is None.
+        wgs : array of floats, optional
+            weights in pounds per feet [ppf]. The default is None.
 
         Returns
         -------
@@ -187,19 +187,32 @@ class casing_design():
     @property
     def ids(self):
         '''
-        array of inner casing diameters [m]
+        array of inner casing diameters [m]. If it is not explicitly given, myres tries to obtain ids values 
+        according to the API casing list using outer diameters and weights. For casings where no entry in the API casing list
+        can be found, ids will be set to zero.
         
         '''
+        #no ids given, get ids from API standard
+        if self._ids is None and (self.ods is not None and self.wgs is not None):
+            self._ids = np.zeros(len(self.ls))
+            for i, v in enumerate(zip(self.ods, self.wgs)):
+                try:
+                    idsi = res.casing_id['{0:.4g}_{1:.4g}'.format(v[0], v[1])]
+                    self._ids[i] = idsi
+                except: #casing not in list
+                    pass
+                         
         return self._ids
     
     @ids.setter
     def ids(self, ids):
+        #ids given
         #type check
-        if not isinstance(ids, Iterable):
+        if ids is not None and not isinstance(ids, Iterable):
             raise ValueError('object must be an iterable')
             
         #check length integrity
-        if len(ids) != len(self.ls):
+        if ids is not None and len(ids) != len(self.ls):
             raise ValueError('Number of ids must correspond to number of lengths')
             
         self._ids = ids
@@ -216,12 +229,13 @@ class casing_design():
     @ods.setter
     def ods(self, ods):
         #type check
-        if not isinstance(ods, Iterable):
+        if ods is not None and not isinstance(ods, Iterable):
             raise ValueError('object must be an iterable')
             
         #check length integrity
-        if len(ods) != len(self.ls):
+        if ods is not None and len(ods) != len(self.ls):
             raise ValueError('Number of ods must correspond to number of lengths')
+            
             
         self._ods = ods
         
@@ -246,22 +260,6 @@ class casing_design():
             
         self._wgs = wgs
         
-# =============================================================================
-# Methods
-# =============================================================================
-
-    def set_ids_from_api(self):
-        '''
-        looks up the inner diameter (mm) of a casing from the API standard.
-
-        Returns
-        -------
-        None.
-
-        '''
-        
-        #TODO
-        pass
 
 class welltop():
     '''
@@ -304,7 +302,7 @@ class well():
     Contains information on a well and allows for computations of derived values
     '''
     
-    def __init__(self, name, uwi = None, casing_design = None, survey = None, welltops = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, k = 3e-5):
+    def __init__(self, name, uwi = None, casing_design = None, survey = None, welltops = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, S = None, k = 3e-5):
         '''
 
         Parameters
@@ -332,6 +330,8 @@ class well():
             Reservoir pressure [bara]. Optional.
         p_regr: float
             Reservoir pressure [bara] using linear regression.
+        S: float, optional
+            salinity [mg/l]
         k: float
             friction losses roughness parameter. Default is 3e-5.
 
@@ -343,6 +343,8 @@ class well():
         self.c_surf = c_surf
         self.T_res = T_res
         self.p_res = p_res
+        self.S = S
+        self.k = k
         self.welltops = welltops if welltops is not None else {} #welltops: dict (name, object of class welltop)
         
         self._casing_design = casing_design
@@ -351,39 +353,39 @@ class well():
 # =============================================================================
 #Properties
 # =============================================================================
-        #casing design
-        @property
-        def casing_design(self):
-            '''
-            casign design as used for friction losses computation
+    #casing design
+    @property
+    def casing_design(self):
+        '''
+        casign design as used for friction losses computation
 
-            '''
-            return self._casing_design
-    
-        @casing_design.setter
-        def casing_design(self, new_casing_design):
-            #type check
-            if not isinstance(new_casing_design, casing_design):
-                raise ValueError('casing design must be of type casing_design')
-                
-            self._casign_design = new_casing_design
-            
-        #survey
-        @property
-        def survey(self):
-            '''
-            well survey
+        '''
+        return self._casing_design
 
-            '''
-            return self._survey
-    
-        @survey.setter
-        def survey(self, new_survey):
-            #type check
-            if not isinstance(new_survey, survey):
-                raise ValueError('survey must be of type survey')
+    @casing_design.setter
+    def casing_design(self, new_casing_design):
+        #type check
+        if not isinstance(new_casing_design, casing_design):
+            raise ValueError('casing design must be of type casing_design')
             
-            self._survey = new_survey
+        self._casign_design = new_casing_design
+        
+    #survey
+    @property
+    def survey(self):
+        '''
+        well survey
+
+        '''
+        return self._survey
+
+    @survey.setter
+    def survey(self, new_survey):
+        #type check
+        if not isinstance(new_survey, survey):
+            raise ValueError('survey must be of type survey')
+        
+        self._survey = new_survey
             
 # =============================================================================
 # Methods to complete missing data (either by computing it or loading it from a database)
@@ -409,25 +411,30 @@ class well():
 # =============================================================================
 # Methods to set attributes
 # =============================================================================
-    def add_welltop(self, name, z_MD = None, z_TVD = None):
+    def add_welltop(self, name, z_MD = None, z_TVD = None, x = None, y = None):
         '''
-        adds a welltop to the well
+        adds a welltop to the well. Given values will be used unchecked. 
+        TODO: Myres will try to complete missing values using the wells survey.
 
         Parameters
         ----------
-        z_MD : flaot, optional
+        z_MD : float, optional
             depth [m MD].
-        z_TVD : TYPE, optional
+        z_TVD : float, optional
             DESCRIPTION. The default is None.
+        x: float, optional
+            x coordinate
+        y: float, optional
+            y coordinate
+            
 
         '''
-        #check if exactly one depth is given
-        if (z_MD is None and z_TVD is None):
-            raise Exception('Depth missing')
+        #check if at least one depth is given
+        if not any([z_MD, z_TVD]):
+            raise Exception('At least one depth (MD or TVD) must be given')
         
-        x = y = 0
         
-        #TODO: ompute TVD/MD, x, y, z
+        #TODO: ompute TVD/MD, x, y from given information and survey
         new_welltop = welltop(name, z_MD = z_MD, z_TVD = z_TVD, x = x, y = y)
         self.welltops[new_welltop.name] = new_welltop
         
@@ -436,10 +443,10 @@ class well():
 # =============================================================================
 # Methods to compute things at certain flow rates. Those methods should be vectorized.
 # =============================================================================
-    @np.vectorize
-    def get_fl_at_q(q, z_ref = 0):
+    def get_fl_at_q(self, q, z_ref = 0, T_res = None, p_res = None, S = None):
         '''
-        computes friction losses at one or many flow rates
+        computes friction losses of the entire well at one or many flow rates. Temperature is assumed as homogeneous throughout the wellbore.
+        
 
         Parameters
         ----------
@@ -447,6 +454,7 @@ class well():
             flow rate(s) [l/s] at which to compute friction closses.
         z_ref: float, optional
             reference depth [m TVD] to compute friction losses at. Default = 0.
+        T_res: production fluid temperature. 
             
 
         Returns
@@ -455,8 +463,20 @@ class well():
             friction losses [bar] at the given flow rates.
 
         '''
-        fl = np.array()
         
+        #choose wells properties if no other values are provided
+        if T_res is None:
+            T_res = self.T_res
+        if p_res is None:
+            p_res = self.p_res
+        if S is None:
+            S = self.S
+        #TODO: adjust casing_design to z_ref (also: deal with inj. vs. prod. well)
+        if not isinstance(q, Iterable): #only one q value
+            fl = res.hyd_fl_well_aux(self.casing_design.ids, self.casing_design.ls, k = self.k,  q = q, p =  p_res, T = T_res, S = S)
+        else:
+            fl = [res.hyd_fl_well_aux(self.casing_design.ids, self.casing_design.ls, k = self.k,  q = qi, p =  p_res, T = T_res, S = S) for qi in q]
+            
         #TODO
         return fl
     
