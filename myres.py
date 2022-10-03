@@ -6,7 +6,7 @@ Created on Sun Oct  2 17:29:52 2022
 @author: mischasch
 """
 from collections.abc import Iterable
-import pandas as pd, numpy as np, reseng_2101 as res
+import pandas as pd, numpy as np, reseng_2101 as res, warnings
 
 class survey():
     '''
@@ -33,9 +33,9 @@ class survey():
 
         '''   
         self.md = md
-        self._incl = incl
-        self._azim = azim
-        self._tvd = tvd
+        self.incl = incl
+        self.azim = azim
+        self.tvd = tvd
         
 # =============================================================================
 #Properties
@@ -48,12 +48,13 @@ class survey():
     @azim.setter
     def azim(self, new_azim):
         #type check
-        if not isinstance(new_azim, Iterable):
-            raise ValueError('object must be an iterable')
-            
-        #check length
-        if len(new_azim != len(self.md)):
-            raise ValueError('Azimuth array must be of equal length as the MD array')
+        if new_azim is not None:
+            if not isinstance(new_azim, Iterable):
+                raise ValueError('object must be an iterable')
+                
+            #check length
+            if len(new_azim != len(self.md)):
+                raise ValueError('Azimuth array must be of equal length as the MD array')
             
         self._azim = new_azim
         
@@ -64,20 +65,20 @@ class survey():
     
     @incl.setter
     def incl(self, new_incl):
-        #type check
-        if not isinstance(new_incl, Iterable):
-            raise ValueError('object must be an iterable')
-            
-        #check length
-        if len(new_incl != len(self.md)):
-            raise ValueError('Inclination array must be of equal length as the MD array')
+        if new_incl is not None:
+            #type check
+            if not isinstance(new_incl, Iterable):
+                raise ValueError('object must be an iterable')
+                
+            #check length
+            if len(new_incl != len(self.md)):
+                raise ValueError('Inclination array must be of equal length as the MD array')
             
         self._incl = new_incl
         
 # =============================================================================
 # Methods
 # =============================================================================
-    @np.vectorize
     def get_tvd_at_md(md):
         '''
         returns TVD values at one or more specific MD depths
@@ -93,7 +94,7 @@ class survey():
             TVD value(s).
 
         '''
-        #TODO
+        #TODO (vectorized)
         tvd = np.array()
         
         return tvd
@@ -131,11 +132,19 @@ class survey():
 class casing_design():
     '''
     '''
-    
+    def get_ids_from_api(self):
+        '''
+        tries to fill missing id values from the API casing list using od and weight
+
+        '''
+        #TODO
+        pass
+        
     def __init__(self, ls, ids = None, ods = None, wgs = None):
         '''
         Casing design as relevant for the computation of friction losses.
-        A casing design must contain the lengths of each casing section. Inner diameters
+        A casing design must contain the lengths of each casing section. 
+        TODO. Inner diameters
         can be defined in two ways:
             - by providing the inner diameters directly (attribute ids)
             - by providing outer diameter and weight. Inner dianeters will be completed according 
@@ -146,7 +155,9 @@ class casing_design():
         ls : np.array
             Length of each casing section from Top Reservoir to surface (ascending) [m]
         ids : array of floats, optional
-            inner diameters in inch (e.g. 6.625). The default is None.
+            inner diameters in inch (e.g. 6.625). The default is None. TODO: If it is not explicitly given, myres tries to obtain ids values 
+            according to the API casing list using outer diameters and weights. For casings where no entry in the API casing list
+            can be found, ids will be set to zero.
         ods : array of floats, optional
             outer diameters in inch (e.g. 6.625). The default is None.
         wgs : array of floats, optional
@@ -157,10 +168,11 @@ class casing_design():
         None.
 
         '''
-        self._ls = ls
-        self._ids = ids
-        self._ods = ods
-        self._wgs = wgs
+        self.ls = ls
+        self.ids = ids
+        self.ods = ods
+        self.wgs = wgs
+    
         
 # =============================================================================
 #       Properties
@@ -181,41 +193,40 @@ class casing_design():
         if not isinstance(ls, Iterable):
             raise ValueError('object must be an iterable')
             
-        self._ls = ls
+            
+        self._ls = np.array(ls)
     
     #inner diameters
     @property
     def ids(self):
         '''
-        array of inner casing diameters [m]. If it is not explicitly given, myres tries to obtain ids values 
-        according to the API casing list using outer diameters and weights. For casings where no entry in the API casing list
-        can be found, ids will be set to zero.
+        array of inner casing diameters [m]. 
         
         '''
-        #no ids given, get ids from API standard
-        if self._ids is None and (self.ods is not None and self.wgs is not None):
-            self._ids = np.zeros(len(self.ls))
-            for i, v in enumerate(zip(self.ods, self.wgs)):
-                try:
-                    idsi = res.casing_id['{0:.4g}_{1:.4g}'.format(v[0], v[1])]
-                    self._ids[i] = idsi
-                except: #casing not in list
-                    pass
                          
         return self._ids
     
     @ids.setter
-    def ids(self, ids):
+    def ids(self, new_ids):
         #ids given
         #type check
-        if ids is not None and not isinstance(ids, Iterable):
-            raise ValueError('object must be an iterable')
+        if new_ids is not None:
+            if not isinstance(new_ids, Iterable):
+                raise ValueError('object must be an iterable')
+                
+            #check length integrity
+            if len(new_ids) != len(self.ls):
+                raise ValueError('Number of ids must correspond to number of lengths')
+                
+            #check ascending ids (must be from bottom to top)
             
-        #check length integrity
-        if ids is not None and len(ids) != len(self.ls):
-            raise ValueError('Number of ids must correspond to number of lengths')
+            #if not np.all(np.diff(new_ids) > 0):
+            #    raise ValueError('inner diameters must be ascending (from top reservoir to surface')
+          
+            self._ids = np.array(new_ids)
             
-        self._ids = ids
+        else:   
+            self._ids = None
         
     #outer diameters
     @property
@@ -227,17 +238,20 @@ class casing_design():
         return self._ods
     
     @ods.setter
-    def ods(self, ods):
+    def ods(self, new_ods):
         #type check
-        if ods is not None and not isinstance(ods, Iterable):
-            raise ValueError('object must be an iterable')
-            
-        #check length integrity
-        if ods is not None and len(ods) != len(self.ls):
-            raise ValueError('Number of ods must correspond to number of lengths')
-            
-            
-        self._ods = ods
+        if new_ods is not None:
+            if not isinstance(new_ods, Iterable):
+                raise ValueError('object must be an iterable')
+                
+            #check length integrity
+            if len(new_ods) != len(self.ls):
+                raise ValueError('Number of ods must correspond to number of lengths')
+                
+                
+            self._ods = np.array(new_ods)
+        else:
+            self._ods = None
         
     #weights
     @property
@@ -249,16 +263,76 @@ class casing_design():
         return self._wgs
     
     @wgs.setter
-    def wgs(self, wgs):
+    def wgs(self, new_wgs):
         #type check
-        if not isinstance(wgs, Iterable):
-            raise ValueError('object must be an iterable')
+        if new_wgs is not None:
+            if not isinstance(new_wgs, Iterable):
+                raise ValueError('object must be an iterable')
+                
+            #check length integrity
+            if len(new_wgs) != len(self.ls):
+                raise ValueError('Number of wgs must correspond to number of lengths')
             
-        #check length integrity
-        if len(wgs) != len(self.ls):
-            raise ValueError('Number of wgs must correspond to number of lengths')
+            self._wgs = np.array(new_wgs)
+        else:
+            self._wgs = None
+        
+# =============================================================================
+#Methods
+# =============================================================================
+    def remove_section(self, section):
+        '''
+        removes a section from the casing design. 
+
+        Parameters
+        ----------
+        section : int
+            index of section in casing design to remove (0 = lowest section, -1 = uppermost section).
+
+        '''
+        
+        #check length
+        if section > len(self.ls) - 1:
+            raise ValueError('index of section higher than sections in casing design')
+        
+        #remove section from ls, ids, ods, wgs
+        _filter = np.ones(len(self.ls)) > 0
+        _filter[section] = False
+        
+        self.ls = self.ls[_filter]
+        
+        if self.ods is not None:
+            self.ods = self.ods[_filter]
             
-        self._wgs = wgs
+        if self.ids is not None:
+            self.ids = self.ids[_filter]
+            
+        if self.wgs is not None:
+            self.wgs = self.wgs[_filter]
+            
+    def add_section(self, index, l, id = None, od = None, wg = None):
+        '''
+        adds a section to a casing list. Missing values (id, od, wg) will be set to zero
+
+        Parameters
+        ----------
+        index : position (0 indexed) at which to insert the section
+            DESCRIPTION.
+        l : float
+            length [m].
+        id : flaot, index
+            inner diameter [m]. The default is None.
+        od : TYPE, optional
+            outer diamerter [m]. The default is None.
+        wg : TYPE, optional
+            weight [ppf]. The default is None.
+
+        '''
+        self.ls = np.insert(self.ls, index, l)
+        
+        self.ids = np.insert(self.ids, index, id if id is not None else 0)
+        self.ods = np.insert(self.ods, index, od if od is not None else 0)
+        self.wga = np.insert(self.wgs, index, wg if wg is not None else 0)
         
 
 class welltop():
@@ -302,7 +376,7 @@ class well():
     Contains information on a well and allows for computations of derived values
     '''
     
-    def __init__(self, name, uwi = None, casing_design = None, survey = None, welltops = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, S = None, k = 3e-5):
+    def __init__(self, name, uwi = None, casing_design = None, survey = None, welltops = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
         '''
 
         Parameters
@@ -310,7 +384,7 @@ class well():
         name : string
             well name
         casing_design : casing_design
-            casing design for friction losses. Optional.
+            casing design for friction losses. It should include all completeions from top reservoir to the surface. Optional.
         survey : survey
             final surfey of a well. Optional.
         welltops: list of welltops
@@ -329,11 +403,15 @@ class well():
         p_res : float
             Reservoir pressure [bara]. Optional.
         p_regr: float
-            Reservoir pressure [bara] using linear regression.
+            Reservoir pressure [bara] according to reservoir-wide regression of p_res vs. top reservoir
         S: float, optional
             salinity [mg/l]
         k: float
             friction losses roughness parameter. Default is 3e-5.
+        welltype: 'prod' or 'inj', optional
+            'prod' for a production well, 'inj' for an injection well. Default is 'prod'
+        z_ESP: float, optional
+            depth [m TVD] of ESP intake
 
         '''
         self.name = name
@@ -347,8 +425,9 @@ class well():
         self.k = k
         self.welltops = welltops if welltops is not None else {} #welltops: dict (name, object of class welltop)
         
-        self._casing_design = casing_design
-        self._survey = survey
+        self.casing_design = casing_design
+        self.survey = survey
+        self.welltype = welltype
         
 # =============================================================================
 #Properties
@@ -365,10 +444,11 @@ class well():
     @casing_design.setter
     def casing_design(self, new_casing_design):
         #type check
-        if not isinstance(new_casing_design, casing_design):
-            raise ValueError('casing design must be of type casing_design')
+        if new_casing_design is not None:
+            if not isinstance(new_casing_design, casing_design):
+                raise ValueError('casing design must be of type casing_design')
             
-        self._casign_design = new_casing_design
+        self._casing_design = new_casing_design
         
     #survey
     @property
@@ -382,10 +462,25 @@ class well():
     @survey.setter
     def survey(self, new_survey):
         #type check
-        if not isinstance(new_survey, survey):
-            raise ValueError('survey must be of type survey')
+        if new_survey is not None:
+            if not isinstance(new_survey, survey):
+                raise ValueError('survey must be of type survey')
         
         self._survey = new_survey
+    
+    #z_ESP
+    @property
+    def z_ESP(self):
+        return self._z_ESP
+    
+    @z_ESP.setter
+    def z_ESP(self, new_z_ESP):
+        if new_z_ESP is not None:
+            if self.welltype != 'prod':
+                warnings.warn('setting z_ESP in an injection well')
+        
+        
+        
             
 # =============================================================================
 # Methods to complete missing data (either by computing it or loading it from a database)
@@ -443,10 +538,85 @@ class well():
 # =============================================================================
 # Methods to compute things at certain flow rates. Those methods should be vectorized.
 # =============================================================================
-    def get_fl_at_q(self, q, z_ref = 0, T_res = None, p_res = None, S = None):
+
+    def find_containing_section(self, z_ref):
         '''
-        computes friction losses of the entire well at one or many flow rates. Temperature is assumed as homogeneous throughout the wellbore.
+        finds the section, in which a given depth lies. ATTENTION: different behaviour in injection and production wells.
+        in production wells, the depth is interpreted as depth below surface.
+        in injection wells, the depth is interpreted as depth above bottom of lowest section.
+
+        Parameters
+        ----------
+        z_ref : float
+            reference depth [m MD].
+
+        Returns
+        -------
+        section_index : TYPE
+            DESCRIPTION.
+
+        '''
+        #find section in which z_ref lies
         
+        #production wells
+        if self.welltype == 'prod':
+            for i in np.arange(len(self.casing_design.ls)) + 1:
+                if self.casing_design.ls[:i].sum() >= z_ref:
+                    return i-1
+                    
+        #injection wells       
+        elif self.welltype =='inj':
+            for i in np.flip(np.arange(len(self.casing_design.ls))) + 1:
+                if self.casing_design.ls[-i:].sum() >= z_ref:
+                    return i-1
+                
+    def get_adjusted_cd_zref(self, z_ref):
+        '''
+        adjustes a casing design to only reach to z_ref. In production wells, it starts at surface, in injection wells at the bottom of the lowest casing.
+
+        Parameters
+        ----------
+        z_res : float
+            reference depth [m MD].
+
+        Returns
+        -------
+        adj_casing_design : casing design
+            adjusted cd.
+
+        '''
+        #adjust casing design for z_ref
+        containing_section = self.find_containing_section(z_ref)
+        
+        adj_casing_design = self.casing_design
+        
+        if self.welltype == 'prod':
+            z_ref_rest = adj_casing_design.ls[:containing_section - 1].sum()
+            for i in np.arange(0, containing_section - 1):
+                adj_casing_design.remove_section(i)
+            
+            adj_casing_design.ls[containing_section] = adj_casing_design.ls[containing_section] - z_ref_rest
+            
+        elif self.welltype == 'inj':
+            z_ref_rest = adj_casing_design.ls[containing_section + 1:-1].sum()
+            for i in np.arange(containing_section + 1, len(adj_casing_design.ls) -1):
+                adj_casing_design.remove_section(i)
+                
+        
+        return adj_casing_design
+    
+    def get_fl_at_q(self, q, z_ref = 0, T_wellbore = None, p_res = None, p_surf = 10, S = None):
+        '''
+        computes friction losses of the entire well at one or many flow rates. Friction losses are by default computed
+        at surface (production well) or at top reservoir(injection wells).
+        
+        Temperature is assumed as homogeneous throughout the wellbore.
+        
+        Flow direction (hence, direction of accumulation of friction losses) is assumed upwards in production wells
+        and downwards in injection wells.
+        
+        Production wells: If you want 
+        to comopute friction losses just until ESP intake, set z_ref to z_ESP
 
         Parameters
         ----------
@@ -454,7 +624,13 @@ class well():
             flow rate(s) [l/s] at which to compute friction closses.
         z_ref: float, optional
             reference depth [m TVD] to compute friction losses at. Default = 0.
-        T_res: production fluid temperature. 
+        T_wellbore: float, optional
+            homogeneous fluid temperature. in wellbore. Default in production wells is reservoir temperature,
+            default in injection wells is 50°C.
+        p_res: float, optional
+            pressure at top reservoir [bara]. Will be obtained from well properties if not given here.
+        p_surf: float, optional
+            surface pressure [bara]. Default is 10.
             
 
         Returns
@@ -465,22 +641,24 @@ class well():
         '''
         
         #choose wells properties if no other values are provided
-        if T_res is None:
-            T_res = self.T_res
+        if T_wellbore is None:
+            T_wellbore = self.T_res if self.welltype == 'prod' else 50
         if p_res is None:
             p_res = self.p_res
         if S is None:
             S = self.S
-        #TODO: adjust casing_design to z_ref (also: deal with inj. vs. prod. well)
+        
+        adj_casing_design = get_adjusted_cd_zref(z_ref)
+
         if not isinstance(q, Iterable): #only one q value
-            fl = res.hyd_fl_well_aux(self.casing_design.ids, self.casing_design.ls, k = self.k,  q = q, p =  p_res, T = T_res, S = S)
+            fl = res.hyd_fl_well_aux(self.casing_design.ids, self.casing_design.ls, k = self.k,  q = q, p =  p_res, T = T_wellbore, S = S)
         else:
-            fl = [res.hyd_fl_well_aux(self.casing_design.ids, self.casing_design.ls, k = self.k,  q = qi, p =  p_res, T = T_res, S = S) for qi in q]
+            fl = [res.hyd_fl_well_aux(self.casing_design.ids, self.casing_design.ls, k = self.k,  q = qi, p =  p_res, T = T_wellbore, S = S) for qi in q]
             
         #TODO
         return fl
     
-    @np.vectorize
+    #@np.vectorize
     def get_p_at_q(q, z_ref = 0, T_res = None):
         '''
         computes the pressure at on or specific flow rates at a specific depth. 
@@ -506,60 +684,6 @@ class well():
         
         return p
     
-class inj_well(well):
-    '''
-    inherits from well, adds some specifics for injection wells
-    '''
-    def __init__(self, name, uwi = None, casing_design = None, inj_liner_ls = None, inj_liner_id = None, survey = None, z_TR = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, k = 3e-5):
-        '''
-        
-
-        Parameters
-        ----------
-        inj_liner_ls : float, optional
-            injection liner length. The default is None.
-        inj_liner_id: float, optional
-            injection liner inner diameter [m]. The default is None.
-
-
-        Returns
-        -------
-        None.
-
-        '''
-        super().__init__(name, uwi, casing_design, survey, z_TR, c_res, b_res, c_surf, T_res, p_res, p_regr, k)
-        
-        self.inj_liner_ls = inj_liner_ls
-        self.inj_liner_id = inj_liner_id
-        
-class prod_well(well):
-    '''
-    inherits from well, adds some specifics for production wells
-    '''
-    def __init__(self, name, uwi = None, casing_design = None, z_TKP = None, prod_liner_ls = None, prod_liner_id = None, survey = None, z_TR = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, k = 3e-5):
-        '''
-        
-
-        Parameters
-        ----------
-        z_TKP : float, optional
-            depth of ESP intake [m TVD]
-        prod_liner_ls float, optional
-            production liner inner diameter [m]
-        prod_liner_ls: float, optional
-            production liner length [m]
-
-
-        Returns
-        -------
-        None.
-
-        '''
-        super().__init__(name, uwi, casing_design, survey, z_TR, c_res, b_res, c_surf, T_res, p_res, p_regr, k)
-        
-        self.inj_liner_ls = inj_liner_ls
-        self.inj_liner_id = inj_liner_id
-        
         
 class field():
     '''
@@ -578,7 +702,7 @@ class field():
 
         '''
         self.name = name
-        self._wells = wells
+        self.wells = wells
         
 # =============================================================================
 #Properties
@@ -590,13 +714,14 @@ class field():
     
     @wells.setter
     def wells(self, new_wells):
-        #type check
-        if not isinstance(new_wells, Iterable):
-            raise ValueError('wells must be a list or an array of wells')
-        else:             
-            for welli in new_wells:
-                if not isinstance(welli, well):
-                    raise ValueError('not all wells are of type well')
+        if new_wells is not None:
+            #type check
+            if not isinstance(new_wells, Iterable):
+                raise ValueError('wells must be a list or an array of wells')
+            else:             
+                for welli in new_wells:
+                    if not isinstance(welli, well):
+                        raise ValueError('not all wells are of type well')
         
         self._wells = new_wells
             
