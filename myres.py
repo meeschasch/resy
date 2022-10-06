@@ -6,9 +6,14 @@ Created on Sun Oct  2 17:29:52 2022
 @author: mischasch
 """
 from collections.abc import Iterable
-import pandas as pd, numpy as np, reseng_2101 as res, warnings
+import pandas as pd
+import numpy as np
+import reseng_2101 as res
+import warnings
+from abc import ABC, abstractmethod
+import matplotlib.pyplot as plt
 
-class survey():
+class Survey():
     '''
     survey of a well. Index is MD. Incl, Azim and TVD refer to this index.
     '''
@@ -129,7 +134,7 @@ class survey():
         
         
         
-class casing_design():
+class CasingDesign():
     '''
     '''
     def get_ids_from_api(self):
@@ -173,7 +178,69 @@ class casing_design():
         self.ods = ods
         self.wgs = wgs
     
+# =============================================================================
+# get item and set item methods        
+# =============================================================================
+    def __getitem__(self, index) -> dict:
+        '''
+        return the nth element of the casing design.
+
+        Parameters
+        ----------
+        index : int
+            index (zero indexed).
+
+        Returns
+        -------
+        dict with fields: l, id, od, wg
+
+        '''
+        #type check
+        if not isinstance(index, int):
+            raise ValueError('Casing can only be indexed by integer')
+            
+        #length check
+        if index > len(self.ls) - 1:
+            raise ValueError('Index out of bounds')
+            
+        return {'l': self.ls[index],
+                'id': self.ids[index],
+                'od': self.ods[index],
+                'wg': self.wgs[index]}
+    
+    def __setitem__(self, index, new) -> None:
+        '''
+        sets a casing in a casing design. Cannot be used to add a new casing (see funtion add_section for that)
+
+        Parameters
+        ----------
+        index : int
+            DESCRIPTION.
+        new : dict
+            fields: l, id, od, wg.
+
+        Returns
+        -------
+        None
+            DESCRIPTION.
+
+        '''
+        #type check
+        if not isinstance(new, dict):
+            raise ValueError('Section casing design must be provided as dictionary')
+            
+        #check index
+        if index > len(self.ls):
+            raise ValueError('index out of bounds')
+            
+        #set item
+        self.ls[index] = new['l']
+        self.ids[index] = new['id']
+        self.ods[index] = new['od']
+        self.wgs[index] = new['wg']
         
+    def __repr__(self):
+        return pd.DataFrame(data = np.array([self.ls, self.ids, self.ods, self.wgs]).T, columns = ['ls', 'ids', 'ods', 'wgs']).to_string(index = False)
 # =============================================================================
 #       Properties
 # =============================================================================
@@ -280,62 +347,144 @@ class casing_design():
 # =============================================================================
 #Methods
 # =============================================================================
-    def remove_section(self, section):
+    def remove_section(self, index):
         '''
         removes a section from the casing design. 
 
         Parameters
         ----------
-        section : int
+        section : int or list of ints
             index of section in casing design to remove (0 = lowest section, -1 = uppermost section).
 
         '''
-        
+        index = np.array(index)
         #check length
-        if section > len(self.ls) - 1:
+        if any(index > len(self.ls) - 1):
             raise ValueError('index of section higher than sections in casing design')
         
-        #remove section from ls, ids, ods, wgs
-        _filter = np.ones(len(self.ls)) > 0
-        _filter[section] = False
-        
-        self.ls = self.ls[_filter]
-        
-        if self.ods is not None:
-            self.ods = self.ods[_filter]
+        reduce = 0
+        for i in index:
+            i -= reduce
+            #remove section from ls, ids, ods, wgs
+            _filter = np.ones(len(self.ls)) > 0
+            _filter[i] = False
             
-        if self.ids is not None:
-            self.ids = self.ids[_filter]
+            self.ls = self.ls[_filter]
             
-        if self.wgs is not None:
-            self.wgs = self.wgs[_filter]
+            if self.ods is not None:
+                self.ods = self.ods[_filter]
+                
+            if self.ids is not None:
+                self.ids = self.ids[_filter]
+                
+            if self.wgs is not None:
+                self.wgs = self.wgs[_filter]
             
-    def add_section(self, index, l, id = None, od = None, wg = None):
+            reduce += 1
+            
+    def add_section(self, section: dict, index: int = None) -> None:
         '''
         adds a section to a casing list. Missing values (id, od, wg) will be set to zero
 
         Parameters
         ----------
-        index : position (0 indexed) at which to insert the section
-            DESCRIPTION.
-        l : float
-            length [m].
-        id : flaot, index
-            inner diameter [m]. The default is None.
-        od : TYPE, optional
-            outer diamerter [m]. The default is None.
-        wg : TYPE, optional
-            weight [ppf]. The default is None.
+        index : int, optional
+            position (0 indexed) at which to insert the section. If not set, section will be added as topmost (last) section
+            
+        section:dict
+            fields: l, id, od, wg. l is mandatory, rest is optional. Unset fields will be added as 0.
+    
 
         '''
-        self.ls = np.insert(self.ls, index, l)
+        #check indx
+        if index is not None and index > len(self.ls):
+            raise ValueError('index out of bounds')
+            
+        if index is None:
+            index = len(self.ls)
+            
+        self.ls = np.insert(self.ls, index, section['l'])
         
-        self.ids = np.insert(self.ids, index, id if id is not None else 0)
-        self.ods = np.insert(self.ods, index, od if od is not None else 0)
-        self.wga = np.insert(self.wgs, index, wg if wg is not None else 0)
+        self.ids = np.insert(self.ids, index, section.get('id') if 'id' in section else 0)
+        self.ods = np.insert(self.ods, index, section.get('od') if 'od' in section else 0)
+        self.wgs = np.insert(self.wgs, index, section.get('wg') if 'wg' in section else 0)
+   
+    def find_containing_section(self, z_ref) ->int:
+        '''
+        finds the section, in which a given depth lies.
+
+        Parameters
+        ----------
+        z_ref : float
+            reference depth [m MD].
+
+        Returns
+        -------
+        section_index : int
+            the section (zero indexed) that contains the reference depth.
+
+        '''
+        length = sum(self.ls) - z_ref
+        #find section in which z_ref lies
+        for i in np.arange(len(self.ls))+1:
+            if self.ls[:i].sum() >= length:
+                return i-1
+                    
+
+    def adjust_to_zref(self, z_ref: float, direction:str = 'up') -> None:
+        '''
+        adjusts the casing design to a reference depth. The new casing design will stop at this depth.
         
 
-class welltop():
+        Parameters
+        ----------
+        z_ref : float
+            reference depth [m TVD].
+        direction: string
+            either 'up' or 'down'. The new casing design will start at the surface 'down' or at the bottom 'up'.
+
+        '''
+        #type check
+        if direction not in ['up', 'down']:
+            raise ValueError('direction must be either up or down.')
+            
+        #find section in which z_ref liesn(zero indexed, zero is lowest section)
+        containing_section = self.find_containing_section(z_ref)
+        
+        if direction == 'up':
+            length = sum(self.ls) - z_ref
+            rest = self.ls[:containing_section + 1].sum() - length#reduce containing section by rest length
+            self.ls[containing_section] -= rest
+            self.remove_section(np.arange(containing_section + 1, len(self.ls))) #remove sections above
+            
+        if direction == 'down':
+            rest = self.ls[containing_section:].sum() - z_ref #reduce containing section by rest length
+            self.ls[containing_section] -= rest
+            self.remove_section(np.arange(0, containing_section)) #remove sections above
+            
+        
+        
+    
+    def compute_volume(z_ref: float) -> float:
+        '''
+        computes the volume of the entire casing design.
+
+        Parameters
+        ----------
+        z_ref : float
+            depth [m TVD] up onto which (starting from bottom of lowest section) volume should be computed.
+
+        Returns
+        -------
+        float
+            wellbore volume [m3].
+
+        '''
+        #TODO
+        pass
+        
+
+class Welltop():
     '''
     a welltop
     '''
@@ -371,7 +520,7 @@ class welltop():
         
                         
         
-class well():
+class Well():
     '''
     Contains information on a well and allows for computations of derived values
     '''
@@ -445,7 +594,7 @@ class well():
     def casing_design(self, new_casing_design):
         #type check
         if new_casing_design is not None:
-            if not isinstance(new_casing_design, casing_design):
+            if not isinstance(new_casing_design, CasingDesign()):
                 raise ValueError('casing design must be of type casing_design')
             
         self._casing_design = new_casing_design
@@ -463,7 +612,7 @@ class well():
     def survey(self, new_survey):
         #type check
         if new_survey is not None:
-            if not isinstance(new_survey, survey):
+            if not isinstance(new_survey, Survey):
                 raise ValueError('survey must be of type survey')
         
         self._survey = new_survey
@@ -530,7 +679,7 @@ class well():
         
         
         #TODO: ompute TVD/MD, x, y from given information and survey
-        new_welltop = welltop(name, z_MD = z_MD, z_TVD = z_TVD, x = x, y = y)
+        new_welltop = Welltop(name, z_MD = z_MD, z_TVD = z_TVD, x = x, y = y)
         self.welltops[new_welltop.name] = new_welltop
         
         
@@ -648,7 +797,8 @@ class well():
         if S is None:
             S = self.S
         
-        adj_casing_design = get_adjusted_cd_zref(z_ref)
+        #TODO: code below not final, to be tested
+        adj_casing_design = self.get_adjusted_cd_zref(z_ref)
 
         if not isinstance(q, Iterable): #only one q value
             fl = res.hyd_fl_well_aux(self.casing_design.ids, self.casing_design.ls, k = self.k,  q = q, p =  p_res, T = T_wellbore, S = S)
@@ -685,7 +835,7 @@ class well():
         return p
     
         
-class field():
+class Field():
     '''
     A field contains a number of wells.
     '''
@@ -720,7 +870,7 @@ class field():
                 raise ValueError('wells must be a list or an array of wells')
             else:             
                 for welli in new_wells:
-                    if not isinstance(welli, well):
+                    if not isinstance(welli, Well):
                         raise ValueError('not all wells are of type well')
         
         self._wells = new_wells
@@ -740,7 +890,7 @@ class field():
 
         '''
         #type check
-        if not isinstance(new_well, well):
+        if not isinstance(new_well, Well):
             raise ValueError('well must be of type well')
             
         self._wells.add(new_well)
@@ -818,8 +968,135 @@ class field():
         #TODO: compute distances
         
         return d
+    
+    def plot(plot:str):
+        '''
+        calls FieldVisualizer objects to plot field data.
+
+        Parameters
+        ----------
+        plot : str
+            plot type. Available:
+                - 'ipr': plots IPR curves of all wells in the field
+
+
+        '''
+        if case == 'ipr':
+            FieldIPRPlotter(self).plot()
+        elif:
+            raise ValueError(f"Plot type {plot} not available")
+
+# =============================================================================
+# Load data from somewhere and store it in the fields wells            
+# =============================================================================
+class DataLoader(ABC):
+    '''
+    abstractr base class for any class that loads data
+    '''
+    def __init__(self, field: Field) -> None:
+        self.field = field
+        
+    @abstractmethod
+    def load(self) -> Field:
+        ...
+        
+class SurveyLoader(DataLoader):
+    def load(self) -> Field:
+        '''
+        #TODO: implement such that to each well a corresponding survey is looked up, loaded andconverted to a survey object.
+
+        Returns
+        -------
+        field
+            DESCRIPTION.
+
+        '''
+        for well in self.wells:
+            pass
+        
+        pass
+
+# =============================================================================
+# Visualize well data    
+# =============================================================================
+class WellVisualizer(ABC):
+    '''
+    Abstract base class for any well plotters
+    '''
+    def __init__(self, well: Well, savepath:str = None) -> None:
+        self.well = well
+        if savepath is not None: 
+            self.dosave= True
+            self.savepath = savepath
             
                 
+    @abstractmethod
+    def plot(self):
+        '''
+        To be implemented in subclasses
+
+        '''
+        ...
+        
+class Well3dPathPlotter(WellVisualizer):
+    '''
+    Creates a 3D plot of the wellpath along with all welltops
+    '''
+    def plot(self):
+        #TODO
+        ...
+# =============================================================================
+# Visualize data from a field
+# =============================================================================
+class FieldVisualizer(ABC):
+    '''
+    Abstract base class for any class that visualizes a field
+    '''
+    def __init__(self, field: Field, savepath: str = None) -> None:
+        self.field = field
+        if savepath is not None: 
+            self.dosave= True
+            self.savepath = savepath
+        
+    @abstractmethod
+    def plot(self):
+        '''
+        To be implemented in subclasses
+
+        '''
+        ...
+        
+class FieldIPRPlotter(FieldVisualizer):
+    def plot(self):
+        '''
+        Plots the IPR curves of all wells in the field
+        '''
+        fig, ax = plt.subplots()
+        for well in self.field.wells:
+            # TODO: extract b and c values, compoute dP for q
+            # Then plot the IPR on ax
+            ...
+        if self.dosave:
+            fig.savefig(self.savepath)
+        return fig
+    
+class FieldWellpathPlotter(FieldVisualizer):
+    '''
+    Plots the surface trajectories of all wells
+    '''
+    def plot(self):
+        #TODO
+        ...
+        
+class FieldPRegressionPlotter(FieldVisualizer):
+    '''
+    Plots reservoir pressure vs. depth of all wells in the field and adda a linear regression
+    '''
+    def plot(self):
+        #TODO
+        ...
+    
+     
                 
                 
                 
