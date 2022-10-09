@@ -18,7 +18,7 @@ ls = [1000, 1000, 1000]
 ods = [7.625, 9.625, 10.75]
 wgs = [41, 36, 79.2]
 ids = [0.3, 0.4, 0.5]
-cd = mr.casing_design(ls = ls, ids = ids, ods = ods, wgs = wgs)
+cd = mr.CasingDesign(ls = ls, ids = ids, ods = ods, wgs = wgs)
 
 #cd.remove_section(2)
 
@@ -28,15 +28,15 @@ cd = mr.casing_design(ls = ls, ids = ids, ods = ods, wgs = wgs)
 # =============================================================================
 # test welltops
 # =============================================================================
-mywell = mr.well(name = 'GIS1', casing_design = cd, p_res = 250, T_res = 140, S = 2000, welltype = 'inj')
+#mywell = mr.well(name = 'GIS1', casing_design = cd, p_res = 250, T_res = 140, S = 2000, welltype = 'inj')
 #mywell.add_welltop('Top Malm')
 
-print(mywell.find_containing_section(1100))
+#print(mywell.find_containing_section(1100))
 # =============================================================================
 # test friction losses
 # =============================================================================
-q = np.arange(1100)
-fl = mywell.get_fl_at_q(q = q)
+#q = np.arange(1100)
+#fl = mywell.get_fl_at_q(q = q)
 
 #plt.plot(q, fl)
 
@@ -71,3 +71,18 @@ fl = mywell.get_fl_at_q(q = q)
 #         self._attr = new_attr
         
 # t = test('sdf')
+
+# =============================================================================
+# Test loading
+# =============================================================================
+
+myfield = mr.Field('Molasse')
+myfield.refresh_from_database()
+myfield.plot('ipr', backend = 'Matplotlib')
+
+myfield['FRH1'].casing_design = cd
+#q = np.arange(0,150)
+#myfield['FRH1'].get_fl_at_q(q, 0)
+
+for well in myfield.wells:
+    print(well.summary)
