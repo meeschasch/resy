@@ -631,13 +631,7 @@ class Well():
         if new_z_ESP is not None:
             if self.welltype != 'prod':
                 warnings.warn('setting z_ESP in an injection well')
-                
-    @property
-    def summary(self):
-        return WellSummarizer(self).summarize()
-        
-        
-        
+  
             
 # =============================================================================
 # Methods to complete missing data (either by computing it or loading it from a database)
@@ -819,7 +813,6 @@ class Well():
         #TODO
         return fl
     
-    #@np.vectorize
     def get_p_at_q(q, z_ref = 0, T_res = None):
         '''
         computes the pressure at on or specific flow rates at a specific depth. 
@@ -845,7 +838,29 @@ class Well():
         
         return p
     
+# =============================================================================
+# Other methods
+# =============================================================================
+    def summary(self, sumtype: str = 'long'):
+        '''
         
+
+        Parameters
+        ----------
+        sumtype : str
+            'long' for a text based comprehensive summary,
+            'short' for a pd.DataFrame with the most important data.
+            Default is 'long'
+
+        '''
+        if sumtype == 'long':
+            return WellSummarizerLong(self).summarize()
+        elif sumtype == 'short':
+            return WellSummarizerShort(self).summarize()
+        else:
+            raise ValueError('Summary type not available')
+            
+            
 class Field():
     '''
     A field contains a number of wells.
@@ -1027,6 +1042,32 @@ class Field():
                 PlotlyFieldIPRPlotter(self, savepath).plot()
         else:
             raise ValueError(f"Plot type {plot} not available")
+            
+    def summary(self, sumtype: str = 'short'):
+        '''
+        creates a summary of all field data.
+
+        Parameters
+        ----------
+        sumtype : str, optional
+            'short' for a pd.DataFrame with the most 
+            important well data. 'long' for a long description
+            of all wells. The default is 'short'.
+
+        '''
+        if sumtype == 'long':
+            s = ''
+            for well in self.wells:
+                s += well.summary(sumtype = 'long')
+            return s
+        
+        elif sumtype == 'short':
+            d = pd.DataFrame([])
+            for well in self.wells:
+                d = d.append(well.summary('short'))
+            return d
+        else:
+            raise ValueError('Summary type not available')
 
 # =============================================================================
 # Load data from somewhere and store it in the fields wells            
@@ -1077,11 +1118,31 @@ class HydraulikDBLoader(DataLoader):
 # =============================================================================
 # Summarize well data
 # =============================================================================
-class WellSummarizer():
-    def __init__(self, well: Well):
+class WellSummarizer(ABC):
+    '''
+    ABC for well summarizer classes
+    '''
+    def __init__(self, well):
         self.well = well
+    @abstractmethod
+    def summarize(self):
+        '''
+        to be implemented by all subclasses
+
+        '''
+        ...
         
+class WellSummarizerLong(WellSummarizer):
     def summarize(self) -> str:
+        '''
+        summarize all well data as string
+
+        Returns
+        -------
+        str
+            text block with all well data.
+
+        '''
         summary = ('UWI: {:s},'.format(self.well.uwi)
                    + ' name:'
                    +   ('{:s}'.format(self.well.name) \
@@ -1091,19 +1152,19 @@ class WellSummarizer():
                    '##################################################\n \n'
                    'Basic resevoir properties\n'
                    '--------------------------------------------------\n'
-                   'Reservoir Pressure:'
+                   'Reservoir Pressure: '
                    + ('{:.2f} [bara]'.format(self.well.p_res)
                        if self.well.p_res is not None \
                        else 'n.a')
                    + '\n'
-                   + 'Reservoir Temperature:'
+                   + 'Reservoir Temperature: '
                    + ('{:.2f} [°C]'.format(self.well.T_res)
                        if self.well.T_res is not None \
                        else 'n.a')
                    + '\n \n'
                    + 'Geochemistry \n'
                    '--------------------------------------------------\n'
-                   'Salinity:'
+                   'Salinity: '
                    + ('{:.2f} [mg/l]'.format(self.well.S)
                        if self.well.S is not None \
                        else 'n.a')
@@ -1114,14 +1175,14 @@ class WellSummarizer():
                        if self.well.casing_design is not None \
                        else 'n.a' )   
                    + '\n\n'
-                   +'Well hyddraulics:'
-                    '------------------------------------\n'
-                   + 'b-coefficient:'
+                   +'Well hyddraulics: \n'
+                    '--------------------------------------------------\n'
+                   + 'b-coefficient: '
                    + ('{:.3f}'.format(self.well.b_res)
                         if self.well.b_res is not None \
                         else 'n.a')
                    + '\n'
-                   +'c-coefficient (at Top Reservoir):'
+                   +'c-coefficient (at Top Reservoir): '
                    + ('{:.3f}'.format(self.well.c_res) \
                        if self.well.c_res is not None \
                        else 'n.a')
@@ -1131,11 +1192,20 @@ class WellSummarizer():
             
         return summary
             
-
+class WellSummarizerShort(WellSummarizer):
+    def summarize(self):
         
+        summary = pd.DataFrame(index = [self.well.uwi])
         
-    
-    
+        #compose dataframe
+        summary.loc[self.well.uwi, 'p_res [bara]'] = self.well.p_res
+        summary.loc[self.well.uwi, 'T_res [°C]'] = self.well.T_res
+        summary.loc[self.well.uwi, 'b_res'] = self.well.b_res
+        summary.loc[self.well.uwi, 'c_res'] = self.well.c_res
+        summary.loc[self.well.uwi, 'S [mg/l]'] = self.well.S
+        
+        return summary
+        
         
 # =============================================================================
 # Visualize well data    
@@ -1170,6 +1240,21 @@ class Well3dPathPlotter(WellVisualizer):
 # =============================================================================
 # Visualize data from a field
 # =============================================================================
+class FieldSummarizer():
+    '''
+    summarize a field (typically: overview of well properties)
+    '''
+    def __init__(self, field: Field):
+        self.field = field
+        
+    def summarize() -> pd.DataFrame:
+        '''
+        returns a pd.DataFrame with all well properties
+        '''
+        summary = pd.DataFrame([])
+        for well in self.wells:
+            summary.append(well.summary_short)
+        
 class FieldVisualizer(ABC):
     '''
     Abstract base class for any class that visualizes a field

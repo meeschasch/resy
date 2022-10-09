@@ -84,5 +84,6 @@ myfield['FRH1'].casing_design = cd
 #q = np.arange(0,150)
 #myfield['FRH1'].get_fl_at_q(q, 0)
 
-for well in myfield.wells:
-    print(well.summary)
+print(myfield.summary('short'))
+# for well in myfield.wells:
+#     print(well.summary(sumtype = 'short'))
