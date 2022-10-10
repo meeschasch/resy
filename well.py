@@ -6,12 +6,23 @@ Created on Sun Oct  9 14:53:08 2022
 @author: mischasch
 """
 
+import numpy as np
+from collections.abc import Iterable
+import warnings
+from abc import ABC, abstractmethod
+
+from resy.casing_design import CasingDesign
+from resy.welltop import Welltop
+from resy.survey import Survey
+from resy.welltop import Welltops
+import resy.reseng_2101 as res
+
 class Well():
     '''
     Contains information on a well and allows for computations of derived values
     '''
     
-    def __init__(self, uwi, name = None, casing_design = None, survey = None, welltops = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
+    def __init__(self, uwi, name = None, casing_design = None, survey = None, welltops: Welltops = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
         '''
 
         Parameters
@@ -58,8 +69,8 @@ class Well():
         self.p_res = p_res
         self.S = S
         self.k = k
-        self.welltops = welltops if welltops is not None else {} #welltops: dict (name, object of class welltop)
         
+        self.welltops = welltops
         self.casing_design = casing_design
         self.survey = survey
         self.welltype = welltype
@@ -102,6 +113,22 @@ class Well():
                 raise ValueError('survey must be of type survey')
         
         self._survey = new_survey
+        
+    @property 
+    def welltops(self):
+        return self._welltops
+    
+    @welltops.setter
+    def welltops(self, new_welltops):
+        #type check
+        if new_welltops is not None:
+            if not isinstance(new_welltops, Welltops):
+                raise ValueError('not a Welltops list')
+                
+            else:
+                self._welltops = new_welltops
+        else:
+            self._welltops = Welltops()
     
     #z_ESP
     @property
@@ -139,32 +166,32 @@ class Well():
 # =============================================================================
 # Methods to set attributes
 # =============================================================================
-    def add_welltop(self, name, z_MD = None, z_TVD = None, x = None, y = None):
-        '''
-        adds a welltop to the well. Given values will be used unchecked. 
-        TODO: Myres will try to complete missing values using the wells survey.
+    # def add_welltop(self, name, z_MD = None, z_TVD = None, x = None, y = None):
+    #     '''
+    #     adds a welltop to the well. Given values will be used unchecked. 
+    #     TODO: Myres will try to complete missing values using the wells survey.
 
-        Parameters
-        ----------
-        z_MD : float, optional
-            depth [m MD].
-        z_TVD : float, optional
-            DESCRIPTION. The default is None.
-        x: float, optional
-            x coordinate
-        y: float, optional
-            y coordinate
+    #     Parameters
+    #     ----------
+    #     z_MD : float, optional
+    #         depth [m MD].
+    #     z_TVD : float, optional
+    #         DESCRIPTION. The default is None.
+    #     x: float, optional
+    #         x coordinate
+    #     y: float, optional
+    #         y coordinate
             
 
-        '''
-        #check if at least one depth is given
-        if not any([z_MD, z_TVD]):
-            raise Exception('At least one depth (MD or TVD) must be given')
+    #     '''
+    #     #check if at least one depth is given
+    #     if not any([z_MD, z_TVD]):
+    #         raise Exception('At least one depth (MD or TVD) must be given')
         
         
-        #TODO: ompute TVD/MD, x, y from given information and survey
-        new_welltop = Welltop(name, z_MD = z_MD, z_TVD = z_TVD, x = x, y = y)
-        self.welltops[new_welltop.name] = new_welltop
+    #     #TODO: ompute TVD/MD, x, y from given information and survey
+    #     new_welltop = Welltop(name, z_MD = z_MD, z_TVD = z_TVD, x = x, y = y)
+    #     self.welltops[new_welltop.name] = new_welltop
 
 # =============================================================================
 # Methods to compute things at certain flow rates. Those methods should be vectorized.
@@ -273,3 +300,123 @@ class Well():
         else:
             raise ValueError('Summary type not available')
  
+# =============================================================================
+# Classes for visualizsation
+# =============================================================================
+class WellVisualizer(ABC):
+    '''
+    Abstract base class for any well plotters
+    '''
+    def __init__(self, well: Well, savepath:str = None) -> None:
+        self.well = well
+        if savepath is not None: 
+            self.dosave= True
+            self.savepath = savepath
+            
+                
+    @abstractmethod
+    def plot(self):
+        '''
+        To be implemented in subclasses
+
+        '''
+        ...
+
+class Well3dPathPlotter(WellVisualizer):
+    '''
+    Creates a 3D plot of the wellpath along with all welltops
+    '''
+    def plot(self):
+        #TODO
+        ...
+        
+# =============================================================================
+# Classes to summarize
+# =============================================================================
+class WellSummarizer(ABC):
+    '''
+    ABC for well summarizer classes
+    '''
+    def __init__(self, well):
+        self.well = well
+    @abstractmethod
+    def summarize(self):
+        '''
+        to be implemented by all subclasses
+
+        '''
+        ...
+        
+class WellSummarizerShort(WellSummarizer):
+    def summarize(self):
+        
+        summary = pd.DataFrame(index = [self.well.uwi])
+        
+        #compose dataframe
+        summary.loc[self.well.uwi, 'p_res [bara]'] = self.well.p_res
+        summary.loc[self.well.uwi, 'T_res [°C]'] = self.well.T_res
+        summary.loc[self.well.uwi, 'b_res'] = self.well.b_res
+        summary.loc[self.well.uwi, 'c_res'] = self.well.c_res
+        summary.loc[self.well.uwi, 'S [mg/l]'] = self.well.S
+        
+        return summary
+    
+class WellSummarizerLong(WellSummarizer):
+    def summarize(self) -> str:
+        '''
+        summarize all well data as string
+
+        Returns
+        -------
+        str
+            text block with all well data.
+
+        '''
+        summary = ('UWI: {:s},'.format(self.well.uwi)
+                   + ' name:'
+                   +   ('{:s}'.format(self.well.name) \
+                       if self.well.name is not None \
+                       else 'n.a')
+                   + '\n \n'
+                   '##################################################\n \n'
+                   'Basic resevoir properties\n'
+                   '--------------------------------------------------\n'
+                   'Reservoir Pressure: '
+                   + ('{:.2f} [bara]'.format(self.well.p_res)
+                       if self.well.p_res is not None \
+                       else 'n.a')
+                   + '\n'
+                   + 'Reservoir Temperature: '
+                   + ('{:.2f} [°C]'.format(self.well.T_res)
+                       if self.well.T_res is not None \
+                       else 'n.a')
+                   + '\n \n'
+                   + 'Geochemistry \n'
+                   '--------------------------------------------------\n'
+                   'Salinity: '
+                   + ('{:.2f} [mg/l]'.format(self.well.S)
+                       if self.well.S is not None \
+                       else 'n.a')
+                   + '\n \n'
+                   +'Casing design (bottom up)\n'
+                   '--------------------------------------------------\n'
+                   + (str(self.well.casing_design) \
+                       if self.well.casing_design is not None \
+                       else 'n.a' )   
+                   + '\n\n'
+                   +'Well hyddraulics: \n'
+                    '--------------------------------------------------\n'
+                   + 'b-coefficient: '
+                   + ('{:.3f}'.format(self.well.b_res)
+                        if self.well.b_res is not None \
+                        else 'n.a')
+                   + '\n'
+                   +'c-coefficient (at Top Reservoir): '
+                   + ('{:.3f}'.format(self.well.c_res) \
+                       if self.well.c_res is not None \
+                       else 'n.a')
+                   + '\n\n'
+                  
+                   )
+            
+        return summary

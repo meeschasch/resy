@@ -5,6 +5,10 @@ Created on Sun Oct  9 16:32:38 2022
 
 @author: mischasch
 """
+import pandas as pd
+import numpy as np
+from collections.abc import Iterable
+
 
 class CasingDesign():
     '''
@@ -219,7 +223,7 @@ class CasingDesign():
 # =============================================================================
 #Methods
 # =============================================================================
-    def remove_section(self, index):
+    def remove(self, index):
         '''
         removes a section from the casing design. 
 
@@ -229,9 +233,12 @@ class CasingDesign():
             index of section in casing design to remove (0 = lowest section, -1 = uppermost section).
 
         '''
+        if not isinstance(index, Iterable):
+            index = [index]
         index = np.array(index)
+        
         #check length
-        if any(index > len(self.ls) - 1):
+        if any(index > (len(self.ls) - 1)):
             raise ValueError('index of section higher than sections in casing design')
         
         reduce = 0
@@ -254,7 +261,7 @@ class CasingDesign():
             
             reduce += 1
             
-    def add_section(self, section: dict, index: int = None) -> None:
+    def add(self, section: dict, index: int = None) -> None:
         '''
         adds a section to a casing list. Missing values (id, od, wg) will be set to zero
 
@@ -311,7 +318,7 @@ class CasingDesign():
         Parameters
         ----------
         z_ref : float
-            reference depth [m TVD].
+            reference depth [m MD].
         direction: string
             either 'up' or 'down'. The new casing design will start at the surface 'down' or at the bottom 'up'.
 

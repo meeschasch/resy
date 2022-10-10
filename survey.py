@@ -5,6 +5,8 @@ Created on Sun Oct  9 16:29:23 2022
 
 @author: mischasch
 """
+from collections.abc import Iterable
+import numpy as np
 
 class Survey():
     '''
