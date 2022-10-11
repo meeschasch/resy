@@ -7,14 +7,11 @@ Created on Sun Oct  9 16:20:41 2022
 """
 #third party imports
 import pandas as pd
-import numpy as np
 from collections.abc import Iterable
-from abc import ABC, abstractmethod
-from matplotlib import pyplot as plt
-import plotly
 
 #local application import
 from resy.well import Well
+from resy.visualizer import FieldVisualizer
 
 class Field():
     '''
@@ -192,9 +189,9 @@ class Field():
         '''
         if plot == 'ipr':
             if backend == 'Matplotlib':
-                PyplotFieldIPRPlotter(self, savepath).plot()
+                FieldVisualizer.PyplotFieldIPRPlotter(self, savepath).plot()
             elif backend == 'Plotly':
-                PlotlyFieldIPRPlotter(self, savepath).plot()
+                FieldVisualizer.PlotlyFieldIPRPlotter(self, savepath).plot()
         else:
             raise ValueError(f"Plot type {plot} not available")
             
@@ -224,114 +221,3 @@ class Field():
         else:
             raise ValueError('Summary type not available')
             
-# =============================================================================
-# Classes to visualize the field            
-# =============================================================================
-class FieldVisualizer(ABC):
-    '''
-    Abstract base class for any class that visualizes a field
-    '''
-    def __init__(self, field: Field, savepath: str = None) -> None:
-        self.field = field
-        if savepath is not None: 
-            self.dosave= True
-            self.savepath = savepath
-        else:
-            self.dosave = False
-            
-        #set matplotlib style
-        plt.style.use('seaborn')
-        plotly.io.renderers.default='browser'
-    
-    def plot(self):
-        '''
-        first, runs the visualize method in the sublasses. Then, saves the figure if required.
-        '''
-        fig = self.visualize()
-        
-        if self.dosave:
-            if not Path(self.savepath).exists():
-                os.mkdir(self.savepath)
-            
-            try:
-                fig.savefig(Path(self.savepath) / 'ipr.png')
-            except:
-                raise Exception('File could not be saved')
-        
-    @abstractmethod
-    def visualize(self):
-        '''
-        To be implemented in subclasses. Must return a pyplot figure.
-
-        '''
-        ...
-    
-class FieldWellpathPlotter(FieldVisualizer):
-    '''
-    Plots the surface trajectories of all wells
-    '''
-    def plot(self):
-        #TODO
-        ...
-        
-class FieldWellpathPlotter(FieldVisualizer):
-    '''
-    Plots the surface trajectories of all wells
-    '''
-    def plot(self):
-        #TODO
-        ...
-        
-    
-class PlotlyFieldIPRPlotter(FieldVisualizer):
-    '''
-    Plots the IPR curves of all wells in the field with Plotly
-    '''
-    def visualize(self, q: tuple = (0,150)):
-        q = np.arange(*q)
-        dp = pd.DataFrame(index = q, columns = self.field.uwis)
-        for well in dp.columns:
-            dp[well] = self.field[well].b_res * q + self.field[well].c_res * q**2
-                          
-        dp['q']= q
-        dp = dp.melt(id_vars = 'q', var_name = 'well', value_name = 'dP')
- 
-        fig = px.line(dp, x = 'q', y = 'dP', color = 'well')
-        fig.show()
-        
-class PyplotFieldIPRPlotter(FieldVisualizer):
-    # def __init__(self, field, savepath):
-    #     super().__init__(self, field, savepath)
-        
-    def visualize(self, q: tuple = (0,150)):
-        '''
-        Plots the IPR curves of all wells in the field with Pyplot
-        '''
-        q = np.arange(*q)
-        fig, ax = plt.subplots()
-        for well in self.field.wells:
-            ax.plot(q, well.b_res * q + well.c_res * q**2, label = well.uwi)
-        
-        ax.legend()
-        ax.set_xlabel('q [l/s]')
-        ax.set_ylabel('dP [bara]')
-        
-        return fig
-    
-# =============================================================================
-# Classes to summarize a field
-# =============================================================================
-class FieldSummarizer():
-    '''
-    summarize a field (typically: overview of well properties)
-    '''
-    def __init__(self, field: Field):
-        self.field = field
-        
-    def summarize() -> pd.DataFrame:
-        '''
-        returns a pd.DataFrame with all well properties
-        '''
-        summary = pd.DataFrame([])
-        for well in self.wells:
-            summary.append(well.summary_short)

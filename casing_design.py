@@ -334,12 +334,12 @@ class CasingDesign():
             length = sum(self.ls) - z_ref
             rest = self.ls[:containing_section + 1].sum() - length#reduce containing section by rest length
             self.ls[containing_section] -= rest
-            self.remove_section(np.arange(containing_section + 1, len(self.ls))) #remove sections above
+            self.remove(np.arange(containing_section + 1, len(self.ls))) #remove sections above
             
         if direction == 'down':
             rest = self.ls[containing_section:].sum() - z_ref #reduce containing section by rest length
             self.ls[containing_section] -= rest
-            self.remove_section(np.arange(0, containing_section)) #remove sections above
+            self.remove(np.arange(0, containing_section)) #remove sections above
             
         
         return self

@@ -16,13 +16,17 @@ from resy.welltop import Welltop
 from resy.survey import Survey
 from resy.welltop import Welltops
 import resy.reseng_2101 as res
-
+from resy.summarizer import WellSummarizer
+from resy.calculator import WellCalculator
 class Well():
     '''
     Contains information on a well and allows for computations of derived values
     '''
     
-    def __init__(self, uwi, name = None, casing_design = None, survey = None, welltops: Welltops = None, c_res = None, b_res = None, c_surf = None, T_res = None, p_res = None, p_regr = None, S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
+    def __init__(self, uwi, name = None, casing_design = None, survey = None, 
+                 welltops: Welltops = None, c_res = None, b_res = None, 
+                 c_surf = None, T_res = None, p_res = None, p_regr = None, 
+                 S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
         '''
 
         Parameters
@@ -30,11 +34,13 @@ class Well():
         name : string
             well name
         casing_design : casing_design
-            casing design for friction losses. It should include all completeions from top reservoir to the surface. Optional.
+            casing design for friction losses. It should include all 
+            completeions from top reservoir to the surface. Optional.
         survey : survey
             final surfey of a well. Optional.
         welltops: list of welltops
-            List containing welltop objects. Optional. Note: it's easiest to set welltops using the set_welltop function. Welltops should include:
+            List containing welltop objects. Optional. Note: it's easiest to 
+            set welltops using the set_welltop function. Welltops should include:
                 - surface
                 - top reservoir
                 - final depth
@@ -49,7 +55,8 @@ class Well():
         p_res : float
             Reservoir pressure [bara]. Optional.
         p_regr: float
-            Reservoir pressure [bara] according to reservoir-wide regression of p_res vs. top reservoir
+            Reservoir pressure [bara] according to reservoir-wide regression of
+            p_res vs. top reservoir
         S: float, optional
             salinity [mg/l]
         k: float
@@ -69,6 +76,7 @@ class Well():
         self.p_res = p_res
         self.S = S
         self.k = k
+        self.z_ESP = z_ESP
         
         self.welltops = welltops
         self.casing_design = casing_design
@@ -129,32 +137,20 @@ class Well():
                 self._welltops = new_welltops
         else:
             self._welltops = Welltops()
-    
-    #z_ESP
-    @property
-    def z_ESP(self):
-        return self._z_ESP
-    
-    @z_ESP.setter
-    def z_ESP(self, new_z_ESP):
-        if new_z_ESP is not None:
-            if self.welltype != 'prod':
-                warnings.warn('setting z_ESP in an injection well')
   
             
-# =============================================================================
-# Methods to complete missing data (either by computing it or loading it from a database)
-# =============================================================================
         
     def compute_c_surf(self, z_ref = 0):
         '''
         
-        computes the surface c-coefficient based on the reservoir c-coefficient ant the friction losses
+        computes the surface c-coefficient based on the reservoir c-coefficient
+        ant the friction losses
         
         Parameters
         ---------
         z_ref: float
-            reference depth to compute the coefficient at (relevant for friction losses computation) [m TVD]. Default is 0.
+            reference depth to compute the coefficient at (relevant for 
+            friction losses computation) [m TVD]. Default is 0.
         
         '''
         c_res = 0
@@ -163,66 +159,33 @@ class Well():
         
         self.c_res = c_res
 
-# =============================================================================
-# Methods to set attributes
-# =============================================================================
-    # def add_welltop(self, name, z_MD = None, z_TVD = None, x = None, y = None):
-    #     '''
-    #     adds a welltop to the well. Given values will be used unchecked. 
-    #     TODO: Myres will try to complete missing values using the wells survey.
 
-    #     Parameters
-    #     ----------
-    #     z_MD : float, optional
-    #         depth [m MD].
-    #     z_TVD : float, optional
-    #         DESCRIPTION. The default is None.
-    #     x: float, optional
-    #         x coordinate
-    #     y: float, optional
-    #         y coordinate
-            
+#%% Methods to compute things from wells.
 
-    #     '''
-    #     #check if at least one depth is given
-    #     if not any([z_MD, z_TVD]):
-    #         raise Exception('At least one depth (MD or TVD) must be given')
-        
-        
-    #     #TODO: ompute TVD/MD, x, y from given information and survey
-    #     new_welltop = Welltop(name, z_MD = z_MD, z_TVD = z_TVD, x = x, y = y)
-    #     self.welltops[new_welltop.name] = new_welltop
-
-# =============================================================================
-# Methods to compute things at certain flow rates. Those methods should be vectorized.
-# =============================================================================
-    def get_fl_at_q(self, q, z_ref = 0, T_wellbore = None, p_res = None, p_surf = 10, S = None):
+    def get_fl_at_q(self, q, z_ref: float = 0, flow_direction: str = 'up'):
         '''
-        computes friction losses of the entire well at one or many flow rates. Friction losses are by default computed
+        computes friction losses of the entire well at one or many flow rates. 
+        Friction losses are by default computed
         at surface (production well) or at top reservoir(injection wells).
         
         Temperature is assumed as homogeneous throughout the wellbore.
-        
-        Flow direction (hence, direction of accumulation of friction losses) is assumed upwards in production wells
-        and downwards in injection wells.
         
         Production wells: If you want 
         to comopute friction losses just until ESP intake, set z_ref to z_ESP
 
         Parameters
         ----------
+        
         q : float or array of floats
             flow rate(s) [l/s] at which to compute friction closses.
         z_ref: float, optional
             reference depth [m TVD] to compute friction losses at. Default = 0.
-        T_wellbore: float, optional
-            homogeneous fluid temperature. in wellbore. Default in production wells is reservoir temperature,
-            default in injection wells is 50°C.
-        p_res: float, optional
-            pressure at top reservoir [bara]. Will be obtained from well properties if not given here.
-        p_surf: float, optional
-            surface pressure [bara]. Default is 10.
-            
+        flow_direction: string
+            'up' for flow from final depth upwards, 'down' for flow
+            from surface downwards. Default is 'up'.
+        T: float, Optional
+            Temperature to use for density computation. Default is the wells
+            reservoir temperature
 
         Returns
         -------
@@ -231,29 +194,10 @@ class Well():
 
         '''
         
-        #choose wells properties if no other values are provided
-        if T_wellbore is None:
-            T_wellbore = self.T_res if self.welltype == 'prod' else 50
-        if p_res is None:
-            p_res = self.p_res
-        if S is None:
-            S = self.S
-        
-        #TODO: code below not final, to be tested
-        if z_ref != 0:
-            adj_casing_design = self.get_adjusted_cd_zref(z_ref)
-        else:
-            adj_casing_design = self.casing_design
-
-        if not isinstance(q, Iterable): #only one q value
-            fl = res.hyd_fl_well_aux(adj_casing_design.ids, adj_casing_design.ls, k = self.k,  q = q, p =  p_res, T = T_wellbore, S = S)
-        else:
-            fl = [res.hyd_fl_well_aux(adj_casing_design.ids, adj_casing_design.ls, k = self.k,  q = qi, p =  p_res, T = T_wellbore, S = S) for qi in q]
-            
-        #TODO
-        return fl
+        return WellCalculator.WellFLatQCalculator(self, q = q, z_ref = z_ref,
+                                   flow_direction = flow_direction).calculate()
     
-    def get_p_at_q(q, z_ref = 0, T_res = None):
+    def get_p_at_q(self, q, z_ref = 0, T = None):
         '''
         computes the pressure at on or specific flow rates at a specific depth. 
 
@@ -264,7 +208,8 @@ class Well():
         z_ref : float, optional
             reference depth [m TVD] at which to compute.. The default is 0.
         T_res: float, optional
-            Reservoir / production temperature. If not set, the wells reservoir temperature will be used.
+            Reservoir / production temperature. If not set, the wells 
+            reservoir temperature will be used.
 
         Returns
         -------
@@ -272,11 +217,7 @@ class Well():
             pressure [bara] at the specified depth at the specified flow rate.
 
         '''
-        p = np.array()
-        
-        #TODO
-        
-        return p
+        return WellCalculator.WellPatQCalculator(self, q, z_ref).calculate()
     
 # =============================================================================
 # Other methods
@@ -294,129 +235,13 @@ class Well():
 
         '''
         if sumtype == 'long':
-            return WellSummarizerLong(self).summarize()
+            return WellSummarizer.WellSummarizerLong(self).summarize()
         elif sumtype == 'short':
-            return WellSummarizerShort(self).summarize()
+            return WellSummarizer.WellSummarizerShort(self).summarize()
         else:
             raise ValueError('Summary type not available')
- 
-# =============================================================================
-# Classes for visualizsation
-# =============================================================================
-class WellVisualizer(ABC):
-    '''
-    Abstract base class for any well plotters
-    '''
-    def __init__(self, well: Well, savepath:str = None) -> None:
-        self.well = well
-        if savepath is not None: 
-            self.dosave= True
-            self.savepath = savepath
+
+
             
-                
-    @abstractmethod
-    def plot(self):
-        '''
-        To be implemented in subclasses
 
-        '''
-        ...
 
-class Well3dPathPlotter(WellVisualizer):
-    '''
-    Creates a 3D plot of the wellpath along with all welltops
-    '''
-    def plot(self):
-        #TODO
-        ...
-        
-# =============================================================================
-# Classes to summarize
-# =============================================================================
-class WellSummarizer(ABC):
-    '''
-    ABC for well summarizer classes
-    '''
-    def __init__(self, well):
-        self.well = well
-    @abstractmethod
-    def summarize(self):
-        '''
-        to be implemented by all subclasses
-
-        '''
-        ...
-        
-class WellSummarizerShort(WellSummarizer):
-    def summarize(self):
-        
-        summary = pd.DataFrame(index = [self.well.uwi])
-        
-        #compose dataframe
-        summary.loc[self.well.uwi, 'p_res [bara]'] = self.well.p_res
-        summary.loc[self.well.uwi, 'T_res [°C]'] = self.well.T_res
-        summary.loc[self.well.uwi, 'b_res'] = self.well.b_res
-        summary.loc[self.well.uwi, 'c_res'] = self.well.c_res
-        summary.loc[self.well.uwi, 'S [mg/l]'] = self.well.S
-        
-        return summary
-    
-class WellSummarizerLong(WellSummarizer):
-    def summarize(self) -> str:
-        '''
-        summarize all well data as string
-
-        Returns
-        -------
-        str
-            text block with all well data.
-
-        '''
-        summary = ('UWI: {:s},'.format(self.well.uwi)
-                   + ' name:'
-                   +   ('{:s}'.format(self.well.name) \
-                       if self.well.name is not None \
-                       else 'n.a')
-                   + '\n \n'
-                   '##################################################\n \n'
-                   'Basic resevoir properties\n'
-                   '--------------------------------------------------\n'
-                   'Reservoir Pressure: '
-                   + ('{:.2f} [bara]'.format(self.well.p_res)
-                       if self.well.p_res is not None \
-                       else 'n.a')
-                   + '\n'
-                   + 'Reservoir Temperature: '
-                   + ('{:.2f} [°C]'.format(self.well.T_res)
-                       if self.well.T_res is not None \
-                       else 'n.a')
-                   + '\n \n'
-                   + 'Geochemistry \n'
-                   '--------------------------------------------------\n'
-                   'Salinity: '
-                   + ('{:.2f} [mg/l]'.format(self.well.S)
-                       if self.well.S is not None \
-                       else 'n.a')
-                   + '\n \n'
-                   +'Casing design (bottom up)\n'
-                   '--------------------------------------------------\n'
-                   + (str(self.well.casing_design) \
-                       if self.well.casing_design is not None \
-                       else 'n.a' )   
-                   + '\n\n'
-                   +'Well hyddraulics: \n'
-                    '--------------------------------------------------\n'
-                   + 'b-coefficient: '
-                   + ('{:.3f}'.format(self.well.b_res)
-                        if self.well.b_res is not None \
-                        else 'n.a')
-                   + '\n'
-                   +'c-coefficient (at Top Reservoir): '
-                   + ('{:.3f}'.format(self.well.c_res) \
-                       if self.well.c_res is not None \
-                       else 'n.a')
-                   + '\n\n'
-                  
-                   )
-            
-        return summary
