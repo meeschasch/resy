@@ -94,3 +94,11 @@ class WellPatQCalculator(WellCalculator):
                                       c = self.well.c_res,
                                       S = self.well.S, p_int = 0)
                  for qi in self.q]
+            
+            
+            
+            
+            
+            
+            
+            

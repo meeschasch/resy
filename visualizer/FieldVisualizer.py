@@ -63,14 +63,6 @@ class FieldWellpathPlotter(FieldVisualizer):
         #TODO
         ...
         
-class FieldWellpathPlotter(FieldVisualizer):
-    '''
-    Plots the surface trajectories of all wells
-    '''
-    def plot(self):
-        #TODO
-        ...
-        
     
 class PlotlyFieldIPRPlotter(FieldVisualizer):
     '''
