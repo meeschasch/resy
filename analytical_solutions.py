@@ -12,14 +12,14 @@ import numbers
 from abc import ABC, abstractmethod
 from matplotlib import pyplot as plt
 
-class Aquifer(ABC):
+class AnalyticalWellTestSolution1D(ABC):
     '''
     ABC for any analytical aquifer solution
     '''
-    def __init__(self, T, S):
+    def __init__(self, T, S,
+                 boundary_type = None, boundary_distance = None):
         '''
-        creates an Aquifer class with hydraulic aquifer characteristics
-
+        OABC for one-dimensional analytical welltest solutions
         Parameters
         ----------
 
@@ -27,6 +27,12 @@ class Aquifer(ABC):
             Transmissivity [m2/s].
         S : float
             Storativity [-].
+        boundary_type: str, optional
+            Either 'positive' (for constant pressure boundaries, 
+            or 'negative' for no-flow boundaries). If None, no boundary will
+            be applied
+        boundary_distance: float, optional
+            Distance of the pumping well to the voundary
 
         Returns
         -------
@@ -35,9 +41,43 @@ class Aquifer(ABC):
         '''
         self.T = T
         self.S = S
+        self.boundary_type = boundary_type
         
+        if boundary_distance is not None:
+            self.boundary_distance = float(boundary_distance)
+        else:
+            self.boundary_distance = None
+        
+    @abstractmethod
+    def compute_drawdown(self, q, r, t) -> float : 
+        #vectorize input
+        q, r, t = vectorize_input([q, r, t])
+        
+class TheisWithBoundary(AnalyticalWellTestSolution1D):
+    def compute_drawdown(self, q, r, t):
+        #drawdown of pumping well
+        s_own = Theis(self.T, self.S).compute_drawdown(q, r, t)
+        
+        #drawdown of image well
+        if self.boundary_type is not None:
+            image_dist = 2 * self.boundary_distance - r
+            if self.boundary_type == 'positive':
+                q_image = -q
+            elif self.boundary_type == 'negative':
+                q_image = q
+            else:
+                raise ValueError('boundary type ' + str(self.boundary_type) +
+                                 ' not known')
+                
+            s_image = Theis(self.T, self.S).compute_drawdown(q_image, image_dist, t)
+        else: #no boundary
+            s_image = 0
+            
+        #total drawdown computed by superposition
 
-class Theis(Aquifer):
+        return s_own + s_image
+    
+class Theis(AnalyticalWellTestSolution1D):
     '''
     analytical solution according to Theis (1935)
     '''
@@ -59,7 +99,9 @@ class Theis(Aquifer):
         float or array of float containing the drawdown
 
         '''
-        q, r, t = vectorize_input([q, r, t])
+        #vectorize input
+        super().compute_drawdown(q, r, t)
+        
         
         #compute u
         u = ((r ** 2) * self.S) / (4 * self.T * t)
@@ -120,14 +162,4 @@ def vectorize_input(inputs):
 
            
            return inputs
-               
-aq = Theis(1e-3, 1e-6)
-
-q = 200e-3
-r = 400
-t = np.linspace(0,20000000,200)
-
-s = aq.compute_drawdown(q, r, t)
-
-plt.plot(t, s)
 

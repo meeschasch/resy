@@ -22,6 +22,7 @@ class DataLoader(ABC):
     abstractr base class for any class that loads data
     '''
     def __init__(self, field: Field) -> None:
+        self.hdb_file = r'/Users/mischasch/Documents/GitHub/Notebooks/HydraulikdatenbankSWM.xlsx'
         self.field = field
         
     @abstractmethod
@@ -35,12 +36,12 @@ class HydraulikDBLoader(DataLoader):
     
     '''
     def load(self):       
-        file = r'I:\Projekte\SW-ER-PG\FG Reservoir\(05) Reservoir Engineering\Datensammlung\neu\HydraulikdatenbankSWM.xlsx'
+        #file = r'I:\Projekte\SW-ER-PG\FG Reservoir\(05) Reservoir Engineering\Datensammlung\neu\HydraulikdatenbankSWM.xlsx'
         
         #%% Verlauf, ATTENTION: nrows needs to be adjusted
         #when new wells are present
         print('Loading 1a Verlauf...')
-        d_verlauf = (pd.read_excel(file, sheet_name = '1a Verlauf',
+        d_verlauf = (pd.read_excel(self.hdb_file, sheet_name = '1a Verlauf',
                                   header = 0,
                                   nrows = 69))
         
@@ -90,7 +91,7 @@ class HydraulikDBLoader(DataLoader):
         
         #%%Temperatur
         print('Loading 2a Temperatur...')
-        d_temperature = (pd.read_excel(file, sheet_name = '2a Temperatur',
+        d_temperature = (pd.read_excel(self.hdb_file , sheet_name = '2a Temperatur',
                                   header = 2,
                                   nrows = 170))
         d_temperature = (d_temperature
@@ -103,7 +104,7 @@ class HydraulikDBLoader(DataLoader):
             
         # %% Potential
         print('Loading 3a Potential...')
-        d_potential = pd.read_excel(file, sheet_name = '3a Potential',
+        d_potential = pd.read_excel(self.hdb_file , sheet_name = '3a Potential',
                                     header = 2,
                                     nrows = 125)
         
@@ -115,7 +116,7 @@ class HydraulikDBLoader(DataLoader):
         print('Done')
         # %% Mineralisation
         print('Loading 8 Mineralisation...')
-        d_mineralisation = pd.read_excel(file, sheet_name = '8 Mineralisation',
+        d_mineralisation = pd.read_excel(self.hdb_file , sheet_name = '8 Mineralisation',
                                     header = 0,
                                     nrows = 54,
                                     na_values = ' ')
@@ -126,7 +127,7 @@ class HydraulikDBLoader(DataLoader):
             
         #%% b- und c-Koeffizienten
         print('Loading 5a Produktivität...')
-        d_ipr = pd.read_excel(file, sheet_name = '5a Produktivität',
+        d_ipr = pd.read_excel(self.hdb_file , sheet_name = '5a Produktivität',
                                     header = 2,
                                     nrows = 37,
                                     na_values = ' ')
@@ -198,10 +199,10 @@ class CasingDesignLoader(DataLoader):
             DESCRIPTION.
 
         '''
-        file = r'I:\Projekte\SW-ER-PG\FG Reservoir\(05) Reservoir Engineering\Datensammlung\neu\HydraulikdatenbankSWM.xlsx'
+        #file = r'I:\Projekte\SW-ER-PG\FG Reservoir\(05) Reservoir Engineering\Datensammlung\neu\HydraulikdatenbankSWM.xlsx'
         
         print('Loading 14 Casing Design...')
-        d_cd = (pd.read_excel(file, sheet_name = '14 Casing Design',
+        d_cd = (pd.read_excel(self.hdb_file, sheet_name = '14 Casing Design',
                                   header = 1))
         
         d_cd = (d_cd.loc[~pd.isna(d_cd.OD)])

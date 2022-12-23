@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = empty-project-type
-recent_files = ['__init__.py', 'data_loader.py', 'field.py', 'survey.py', 'casing_design.py', 'well.py', 'reseng_2101.py', 'visualizer/WellVisualizer.py', 'visualizer/FieldVisualizer.py', 'summarizer/WellSummarizer.py', 'summarizer/FieldSummarizer.py', 'visualizer/__init__.py', 'calculator/WellCalculator.py', '../test.py', 'welltop.py']
+recent_files = ['data_loader.py', 'analytical_solutions.py', 'calculator/WellCalculator.py']
 
 [main]
 version = 0.2.0

@@ -10,7 +10,7 @@ from collections.abc import Iterable
 #from resy import reseng_2101 as res
 import sys
 sys.path.append(r'C:\Users\Schweingruber.Misc\Documents\GitHub\reseng\Bibliotheken')
-import reseng_2101 as res
+#import reseng_2101 as res
 
 
 
