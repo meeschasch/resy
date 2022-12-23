@@ -10,90 +10,166 @@ import numpy as np
 from collections.abc import Iterable
 import warnings
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 from resy.casing_design import CasingDesign
 from resy.welltop import Welltop
 from resy.survey import Survey
-from resy.welltop import Welltops
-import resy.reseng_2101 as res
-from resy.summarizer import WellSummarizer
-from resy.calculator import WellCalculator
+#from resy.welltop import Welltops
+#from resy.summarizer import WellSummarizer
+import resy.calculator.WellCalculator as WellCalculator
+from resy.plotter.WellPlotter import *
+import resy.summarizer as summarizer
+from resy.ipr import IPR
 
 class Well():
     '''
     Contains information on a well and allows for computations of derived values
-
-
-    Parameters
-    ----------
-    name : string
-        well name
-    casing_design : casing_design
-        casing design for friction losses. It should include all 
-        completeions from top reservoir to the surface. Optional.
-    survey : survey
-        final surfey of a well. Optional.
-    welltops: list of welltops
-        List containing welltop objects. Optional. Note: it's easiest to 
-        set welltops using the set_welltop function. Welltops should include:
-            - surface
-            - top reservoir
-            - final depth
-    c_res : float
-        c-coefficient at Top Reservoir. Optional.
-    b_res : float
-        b-coefficient at Top Reservoir. Optional.
-    c_surf : float
-        c-coefficient at surface. Optional.
-    T_res : float
-        Reservoir temperature [°C]. Optional.
-    p_res : float
-        Reservoir pressure [bara]. Optional.
-    p_regr: float
-        Reservoir pressure [bara] according to reservoir-wide regression of
-        p_res vs. top reservoir
-    S: float, optional
-        salinity [mg/l]
-    k: float
-        friction losses roughness parameter. Default is 3e-5.
-    z_ESP: float, optional
-        depth [m TVD] of ESP intake
-
+    '''
+    
+    def __init__(self, uwi, name = None, casing_design = None, survey = None, 
+                 welltops: dict = None, ipr: IPR = None, 
+                 T_res = None, p_res = None, p_regr = None, 
+                 S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
         '''
-    uwi: str
-    name: str = None
-    c_res: float = None
-    b_res: float = None
-    T_res: float = None
-    p_res: float = None
-    S: float = None
-    k: float = 3e-5
-    z_ESP: float = None
-    welltops: Welltop = None
-    survey: Survey = None
-    casing_design: CasingDesign = None
-        
 
-    def summary(self, sumtype: str = 'long'):
-        '''
-        
         Parameters
         ----------
-        sumtype : str
-            'long' for a text based comprehensive summary,
-            'short' for a pd.DataFrame with the most important data.
-            Default is 'long'
+        name : string
+            well name
+        casing_design : casing_design
+            casing design for friction losses. It should include all 
+            completeions from top reservoir to the surface. Optional.
+        survey : survey
+            final surfey of a well. Optional.
+        welltops: dict of welltops
+            List containing welltop objects. Optional. Note: it's easiest to 
+            set welltops using the set_welltop function. Welltops should include:
+                - surface
+                - top reservoir
+                - final depth
+            in case of a production well, it should further include:
+                - esp intake
+                - esp sensor
+                - esp backup
+        ipr: resy.IPR
+            inflow performance relationship
+        T_res : float
+            Reservoir temperature [°C]. Optional.
+        p_res : float
+            Reservoir pressure [bara]. Optional.
+        p_regr: float
+            Reservoir pressure [bara] according to reservoir-wide regression of
+            p_res vs. top reservoir
+        S: float, optional
+            salinity [mg/l]
+        k: float
+            friction losses roughness parameter. Default is 3e-5.
+        welltype: 'prod' or 'inj', optional
+            'prod' for a production well, 'inj' for an injection well. Default is 'prod'
+        z_ESP: float, optional
+            depth [m TVD] of ESP intake
 
         '''
-        if sumtype == 'long':
-            return WellSummarizer.WellSummarizerLong(self).summarize()
-        elif sumtype == 'short':
-            return WellSummarizer.WellSummarizerShort(self).summarize()
+        self.name = name
+        self.uwi = uwi
+        self.T_res = T_res
+        self.p_res = p_res
+        self.S = S
+        self.k = k
+        self.z_ESP = z_ESP
+        
+        if welltops is None:
+            self.welltops = dict()
         else:
-            raise ValueError('Summary type not available')
+            self.welltops = welltops
+        
+        if ipr is None:
+            self.ipr = IPR()
+        else:
+            self.ipr = ipr
+            
+        self.casing_design = casing_design
+        self.survey = survey
+        self.welltype = welltype
+        
+# =============================================================================
+#Properties
+# =============================================================================
+    #casing design
+    @property
+    def casing_design(self):
+        '''
+        casign design as used for friction losses computation
 
-#%% Methods to compute things from wells.
+        '''
+        return self._casing_design
+
+    @casing_design.setter
+    def casing_design(self, new_casing_design):
+        #type check
+        if new_casing_design is not None:
+            if not isinstance(new_casing_design, CasingDesign):
+                raise ValueError('casing design must be of type casing_design')
+            
+        self._casing_design = new_casing_design
+        
+    #survey
+    @property
+    def survey(self):
+        '''
+        well survey
+
+        '''
+        return self._survey
+
+    @survey.setter
+    def survey(self, new_survey):
+        #type check
+        if new_survey is not None:
+            if not isinstance(new_survey, Survey):
+                raise ValueError('survey must be of type survey')
+        
+        self._survey = new_survey
+        
+    # @property 
+    # def welltops(self):
+    #     return self._welltops
+    
+    # @welltops.setter
+    # def welltops(self, new_welltops):
+    #     #type check
+    #     if new_welltops is not None:
+    #         if not isinstance(new_welltops, Welltops):
+    #             raise ValueError('not a Welltops list')
+                
+    #         else:
+    #             self._welltops = new_welltops
+    #     else:
+    #         self._welltops = Welltops()
+  
+            
+        
+    def compute_c_surf(self, z_ref = 0):
+        '''
+        
+        computes the surface c-coefficient based on the reservoir c-coefficient
+        ant the friction losses
+        
+        Parameters
+        ---------
+        z_ref: float
+            reference depth to compute the coefficient at (relevant for 
+            friction losses computation) [m TVD]. Default is 0.
+        
+        '''
+        c_res = 0
+        
+        #TODO
+        
+        self.c_res = c_res
+
+
+#%% Computation methods
 
     def get_fl_at_q(self, q, z_ref: float = 0, flow_direction: str = 'up'):
         '''
@@ -152,9 +228,58 @@ class Well():
         '''
         return WellCalculator.WellPatQCalculator(self, q, z_ref).calculate()
     
+#%% Summary and plotting
+    def summary(self, sumtype: str = 'long', dodisplay = False):
+        '''
+        
 
+        Parameters
+        ----------
+        sumtype : str
+            'long' for a text based comprehensive summary,
+            'short' for a pd.DataFrame with the most important data.
+            Default is 'long'
+        dodisplay: bool
+            If True, summary is displayed instantly. If False, the summary will
+            be returned.
 
-
+        '''
+        if sumtype == 'long':
+            return (summarizer.WellSummarizerLong(self)
+                .summarize(dodisplay=dodisplay))
+        elif sumtype == 'short':
+            return summarizer.WellSummarizerShort(self).summarize()
+        else:
+            raise ValueError('Summary type not available')
             
+    def plot_mpl(self, plottype, ax = None, savepath: str = None, **kwargs):
+        '''
+        plots a well in a defined way.
+
+        Parameters
+        ----------
+        plottype : str
+            one of the following options:
+            'IPR'
+        ax: matplotlib.axis
+            ax to plot on. If None, a new ax is created. Default is None.
+        savepath: str or Path
+            path to save figure to. If None, figure is not saved.
+        **kwargs: named arguments are forwareded to the plotter object
+
+        Returns
+        -------
+        None.
+
+        '''
+        plotters = {'IPR': MplWellIPRPlotter(ax = ax)} #register new plotters here
+        
+
+        plotter = plotters[plottype]
+        
+        plotter.well = self 
+        plotter.savepath = savepath
+        
+        plotter.plot(**kwargs)
 
 

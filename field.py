@@ -11,7 +11,7 @@ from collections.abc import Iterable
 
 #local application import
 from resy.well import Well
-from resy.visualizer import FieldVisualizer
+from resy.plotter.FieldPlotter import *
 
 class Field():
     '''
@@ -109,6 +109,25 @@ class Field():
             
         self._wells.append(new_well)
         
+    def remove_wells(self, uwis):
+        '''
+        removes wells from the field
+        
+        Paramters
+        -------
+        wells: one UWI as string or list of UWIs as strings
+        '''
+        #make array if only one value provided
+        if isinstance(uwis, str):
+            uwis = [uwis]
+        
+        #remve wells
+        for uwi in uwis:
+            if uwi not in self.uwis:
+                raise ValueError('Well ' + uwi + ' not in field')
+            else:
+                self.wells.remove(self[uwi])
+        
     def refresh_from_database(self, wells = None, do_hydraulik_db = True, do_welltops = True, do_survey = True, do_casing_design = True):
         '''
         Refreshes / obtains well data from the common database. This function is hardcoded and requires a correctly formatted input file.
@@ -144,8 +163,8 @@ class Field():
             #TODO
             pass
         if do_casing_design:
-            #TODO
-            pass
+            from resy.data_loader import CasingDesignLoader
+            CasingDesignLoader(self).load()
         
     def compute_distances_welltop(self, welltop_name):
         '''
@@ -174,26 +193,41 @@ class Field():
         
         return d
     
-    def plot(self, plot:str, savepath: str = None, backend = 'Matplotlib'):
+    def plot_mpl(self, plottype, plotwells = None, savepath: str = None, **kwargs):
         '''
-        calls FieldVisualizer objects to plot field data.
+        plots a well in a defined way.
 
         Parameters
         ----------
-        plot : str
-            plot type. Available:
-                - 'ipr': plots IPR curves of all wells in the field
-        backend: Matplotlib or Plotly. Default ist Matplotlib.
+        plottype : str
+            one of the following options:
+            'IPR'
+        plotwells: well uwi or list those, these wells will be plotted
+        savepath: str or Path
+            path to save figure to. If None, figure is not saved.
+        **kwargs: named arguments are forwareded to the plotter object
 
+        Returns
+        -------
+        None.
 
         '''
-        if plot == 'ipr':
-            if backend == 'Matplotlib':
-                FieldVisualizer.PyplotFieldIPRPlotter(self, savepath).plot()
-            elif backend == 'Plotly':
-                FieldVisualizer.PlotlyFieldIPRPlotter(self, savepath).plot()
-        else:
-            raise ValueError(f"Plot type {plot} not available")
+        #define ax (functionality to plot field plots on an existing ax is not
+        #implemented)
+        _, ax = plt.subplots()
+        
+        #register new plotters here
+        plotters = {'IPR': MplFieldIPRPlotter(ax = ax, 
+                                              field = self,
+                                              plotwells = plotwells,
+                                              savepath = savepath)}
+        
+
+        plotter = plotters[plottype]
+        
+        plotter.plot(**kwargs)
+        
+        return ax
             
     def summary(self, sumtype: str = 'short'):
         '''

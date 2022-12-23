@@ -21,24 +21,26 @@ class CasingDesign():
         #TODO
         pass
         
-    def __init__(self, ls, ids = None, ods = None, wgs = None):
+    def __init__(self, ls, ids = None, z_from = None, z_to = None,
+                 ods = None, wgs = None, descr = None):
         '''
         Casing design as relevant for the computation of friction losses.
         A casing design must contain the lengths of each casing section. 
-        TODO. Inner diameters
         can be defined in two ways:
             - by providing the inner diameters directly (attribute ids)
             - by providing outer diameter and weight. Inner dianeters will be completed according 
-            to the API standards.
+            to the API standards (NOT YET IMPLEMENTED).
 
         Parameters
         ----------
-        ls : np.array
+        ls : array of floats
             Length of each casing section from Top Reservoir to surface (ascending) [m]
         ids : array of floats, optional
-            inner diameters in inch (e.g. 6.625). The default is None. TODO: If it is not explicitly given, myres tries to obtain ids values 
-            according to the API casing list using outer diameters and weights. For casings where no entry in the API casing list
-            can be found, ids will be set to zero.
+            inner diameters in inch (e.g. 6.625). The default is None.
+        z_from: array of floats, optional
+            depth (m MD) at which casing starts (higher value than z_to)
+        z_to: array of floats, optional
+            depth (m MD) at which casing ends (lower value than z_from)
         ods : array of floats, optional
             outer diameters in inch (e.g. 6.625). The default is None.
         wgs : array of floats, optional
@@ -53,6 +55,9 @@ class CasingDesign():
         self.ids = ids
         self.ods = ods
         self.wgs = wgs
+        self.descr = descr
+        self.z_from = z_from
+        self.z_to = z_to
     
 # =============================================================================
 # get item and set item methods        
@@ -82,11 +87,13 @@ class CasingDesign():
         return {'l': self.ls[index],
                 'id': self.ids[index],
                 'od': self.ods[index],
-                'wg': self.wgs[index]}
+                'wg': self.wgs[index],
+                'descr': self.descr[index]}
     
     def __setitem__(self, index, new) -> None:
         '''
-        sets a casing in a casing design. Cannot be used to add a new casing (see funtion add_section for that)
+        sets a casing in a casing design. Cannot be used to add a new casing 
+        (see funtion add_section for that)
 
         Parameters
         ----------
@@ -114,9 +121,10 @@ class CasingDesign():
         self.ids[index] = new['id']
         self.ods[index] = new['od']
         self.wgs[index] = new['wg']
+        self.descr[index] = new['descr']
         
     def __repr__(self):
-        return pd.DataFrame(data = np.array([self.ls, self.ids, self.ods, self.wgs]).T, columns = ['ls', 'ids', 'ods', 'wgs']).to_string(index = False)
+        return pd.DataFrame(data = np.array([self.ls, self.ids, self.ods, self.wgs, self.descr]).T, columns = ['ls', 'ids', 'ods', 'wgs', 'descr']).to_string(index = False)
 # =============================================================================
 #       Properties
 # =============================================================================

@@ -7,16 +7,19 @@ Created on Tue Oct 11 22:44:21 2022
 """
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from resy import reseng_2101 as res
+#from resy import reseng_2101 as res
+import sys
+sys.path.append(r'C:\Users\Schweingruber.Misc\Documents\GitHub\reseng\Bibliotheken')
+import reseng_2101 as res
 
 
-from resy import Well
 
 class WellCalculator(ABC):
     '''
     ABC for all calculator classes
     '''
-    def __init__(self, well: Well):
+    def __init__(self, well):
+        from resy import Well #avoid circular import
         self.well = well
         
 
@@ -30,7 +33,7 @@ class WellFLatQCalculator(WellCalculator):
         see documentation in Well.get_fl_at_q()
 
         '''
-        def __init__(self, well: Well, q, z_ref: float, flow_direction: str = 'up'):
+        def __init__(self, well, q, z_ref: float, flow_direction: str = 'up'):
             super().__init__(well)
             
             self.q = q
@@ -59,7 +62,11 @@ class WellFLatQCalculator(WellCalculator):
             return fl
     
 class WellPatQCalculator(WellCalculator):
-    def __init__(self, well: Well, q, z_ref, flow_direction = 'up', T = None):
+    '''
+    computes pressure at a given depth in a well
+    '''
+    
+    def __init__(self, well, q, z_ref, flow_direction = 'up', T = None):
         super().__init__(well)
         
         self.q = q
@@ -94,11 +101,3 @@ class WellPatQCalculator(WellCalculator):
                                       c = self.well.c_res,
                                       S = self.well.S, p_int = 0)
                  for qi in self.q]
-            
-            
-            
-            
-            
-            
-            
-            
