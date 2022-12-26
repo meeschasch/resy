@@ -20,6 +20,7 @@ import resy.calculator.WellCalculator as WellCalculator
 from resy.plotter.WellPlotter import *
 import resy.summarizer as summarizer
 from resy.ipr import IPR
+from resy.hydraulic_characterisation import PTA
 
 class Well():
     '''
@@ -27,7 +28,7 @@ class Well():
     '''
     
     def __init__(self, uwi, name = None, casing_design = None, survey = None, 
-                 welltops: dict = None, ipr: IPR = None, 
+                 welltops: dict = None, ipr: IPR = None, pta = None,
                  T_res = None, p_res = None, p_regr = None, 
                  S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
         '''
@@ -53,6 +54,8 @@ class Well():
                 - esp backup
         ipr: resy.IPR
             inflow performance relationship
+        pta: resy.PTA
+            pressure transient analysis results
         T_res : float
             Reservoir temperature [°C]. Optional.
         p_res : float
@@ -87,6 +90,11 @@ class Well():
             self.ipr = IPR()
         else:
             self.ipr = ipr
+            
+        if pta is None:
+            self.pta = PTA()
+        else: 
+            self.pta = pta
             
         self.casing_design = casing_design
         self.survey = survey

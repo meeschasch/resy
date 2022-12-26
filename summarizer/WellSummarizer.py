@@ -45,6 +45,15 @@ class WellSummarizerShort(WellSummarizer):
             summary.loc[self.well.uwi, 'Top Reservoir [m TVD]'] = (self.well
             .welltops['top reservoir'].z_TVD)
             
+        if self.well.pta.transmissivity is not None:
+            summary.loc[self.well.uwi, 'Transmissivity [m2/s]'] = self.well.pta.transmissivity
+            
+        if self.well.pta.poro is not None:
+             summary.loc[self.well.uwi, 'Porosity [m2/s]'] = self.well.pta.poro
+             
+        if self.well.ipr.origin is not None:
+            summary.loc[self.well.uwi, 'IPR Origin'] = self.well.ipr.origin
+            
         if dodisplay:
             display(summary)
         else:

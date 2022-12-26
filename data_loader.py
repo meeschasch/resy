@@ -16,6 +16,7 @@ from resy.field import Field
 from resy.welltop import Welltop
 from resy.ipr import IPR
 from resy.casing_design import CasingDesign
+from resy.hydraulic_characterisation import PTA
 
 class DataLoader(ABC):
     '''
@@ -170,7 +171,29 @@ class HydraulikDBLoader(DataLoader):
             self.field[welli.UWI].ipr = ipr
             
         print('Done')
+        
+        #%% PTA
+        
+        print('Loading PTA...')
+        d_pta = pd.read_excel(self.hdb_file , sheet_name = '4d Hydraulik PTA',
+                                    header = 2,
+                                    nrows = 78,
+                                    na_values = ' ')
+        d_pta = (d_pta.loc[d_pta.chk == 1])
+               
+        for i, welli in d_pta.iterrows():
+            pta = PTA(perm = welli['Permeabilität'],
+                                   poro = welli['Porosität'],
+                                   aquifer_thickness = welli['Mächtigkeit Auswertung'],
+                                   transmissibility = welli['Transmissibilität'],
+                                   transmissivity = welli['Transmissivität'],
+                                   porosity_thickness = welli['Porosität x Mächtigkeit'],
+                                   storativity = welli['Speicherkoeffizient'])
+            
+            #TODO: import string fields (wbs_type etc.)
+            self.field[welli['chk Bohrung']].pta = pta
 
+        print('Done')
             
                 
 class SurveyLoader(DataLoader):
