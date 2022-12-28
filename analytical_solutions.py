@@ -109,11 +109,11 @@ class Boundary1D(ABC):
         
 class AnalyticalWellTestSolution():
     '''
-    factory class for all kind of solutions
+    factory class for all kind of solutions and boundaries
     '''
     def __init__(self, 
                  solution: str,
-                 T: float, S: float, rw:float,
+                 T: float, S: float, rw:float = None,
                  boundary_distance:float = None, boundary_type:str = None,
                  skin_factor: float = 0,
                  Ts: float = None, rs: float = None):
@@ -152,6 +152,7 @@ class AnalyticalWellTestSolution():
         '''
         self.T = T
         self.S = S
+        self.skin_factor = skin_factor
 
         #register new solutios here
         available_solutions = {'Theis': TheisBase(self.T, self.S)}
@@ -175,6 +176,8 @@ class AnalyticalWellTestSolution():
                 self.boundary_distance = boundary_distance
             else:
                 raise ValueError('Boundary distance must be set')
+        else:
+            self.boundary = None
                 
     def compute_drawdown(self, q, r, t):
         '''
@@ -183,10 +186,19 @@ class AnalyticalWellTestSolution():
         q, r, t = vectorize_input([q, r, t])
         
         s_own = self.solution.compute_drawdown(q, r, t)
-        s_bound = self.boundary.compute_boundary_effect(q, r, t)
+        if self.boundary is not None:
+            s_bound = self.boundary.compute_boundary_effect(q, r, t)
+        else:
+            s_bound = 0
+            
+        if self.skin_factor != 0:
+            s_skin = Skin(self.T, 
+                          sigma = self.skin_factor).compute_drawdown(q)
+        else:
+            s_skin = 0
         
         #superposition principle
-        s = s_own + s_bound
+        s = s_own + s_bound + s_skin
         
         return s
         
@@ -216,7 +228,12 @@ class TheisWithBoundary(AnalyticalWellTestSolution1DABC):
     
 class Skin():
     '''
-    class for Skin drawdown effects to be added to any analytical solution
+    class for Skin drawdown effects to be added to any analytical solution.
+    
+    Skin is computed according to Agarwal et al. (1970) and ASSUMES STEADY STATE.
+    
+    ATTENTION: neagtive values are not treated properly (their effect is highly exaggerated)
+    TODO: transient skin
     '''
     def __init__(self, T: float, sigma: float = None, T_s: float = None,rs: float = None, rw: float = None):
         
@@ -271,7 +288,7 @@ class Skin():
         drawdown [m]
 
         '''
-        return q / (2 * np.pi * self.T)
+        return q / (2 * np.pi * self.T) * self.sigma
     
 class TheisBase(AnalyticalWellTestSolution1DABC):
     '''

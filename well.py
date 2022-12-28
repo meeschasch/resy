@@ -139,22 +139,6 @@ class Well():
         
         self._survey = new_survey
         
-    # @property 
-    # def welltops(self):
-    #     return self._welltops
-    
-    # @welltops.setter
-    # def welltops(self, new_welltops):
-    #     #type check
-    #     if new_welltops is not None:
-    #         if not isinstance(new_welltops, Welltops):
-    #             raise ValueError('not a Welltops list')
-                
-    #         else:
-    #             self._welltops = new_welltops
-    #     else:
-    #         self._welltops = Welltops()
-  
             
         
     def compute_c_surf(self, z_ref = 0):
@@ -252,14 +236,12 @@ class Well():
             be returned.
 
         '''
-        if sumtype == 'long':
-            return (summarizer.WellSummarizerLong(self)
-                .summarize(dodisplay=dodisplay))
-        elif sumtype == 'short':
-            return summarizer.WellSummarizerShort(self).summarize()
-        else:
-            raise ValueError('Summary type not available')
-            
+        
+        summaries = {'long': summarizer.WellSummarizerLong(self),
+                     'short': summarizer.WellSummarizerPandas(self)}
+
+        return summaries[sumtype].summarize()    
+    
     def plot_mpl(self, plottype, ax = None, savepath: str = None, **kwargs):
         '''
         plots a well in a defined way.

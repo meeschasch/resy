@@ -188,9 +188,10 @@ class HydraulikDBLoader(DataLoader):
                                    transmissibility = welli['Transmissibilität'],
                                    transmissivity = welli['Transmissivität'],
                                    porosity_thickness = welli['Porosität x Mächtigkeit'],
-                                   storativity = welli['Speicherkoeffizient'])
+                                   storativity = welli['Speicherkoeffizient'],
+                                   m_d_comp = welli['M=D'],
+                                   skin = welli['Skin/Skin0'])
             
-            #TODO: import string fields (wbs_type etc.)
             self.field[welli['chk Bohrung']].pta = pta
 
         print('Done')

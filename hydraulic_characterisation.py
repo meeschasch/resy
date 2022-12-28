@@ -19,7 +19,8 @@ class PTA():
                  skin: float = None,
                  wbs_type:str = None, well_model:str = None,
                  skin_type:str = None, 
-                 reservoir_model:str = None, boundary_model:str = None):
+                 reservoir_model:str = None, boundary_model:str = None,
+                 m_d_comp: float = None):
         '''
         
 
@@ -51,6 +52,9 @@ class PTA():
             reservoir model. The default is None.
         boundary_model : str, optional
             boundary model. The default is None.
+        m_d_comp: float, optonal
+            M = D for composite reservoirs.
+            kh_outer_reservoir = kh_inner_reservoir / M
 
         Returns
         -------
@@ -66,5 +70,7 @@ class PTA():
         self.wbs_type = wbs_type
         self.well_model = well_model
         self.skin_type = skin_type
+        self.skin = skin
         self.reservoir_model = reservoir_model
         self.boundary_model = boundary_model
+        self.m_d_comp = m_d_comp

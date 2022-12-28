@@ -25,7 +25,7 @@ class WellSummarizer(ABC):
         '''
         ...
         
-class WellSummarizerShort(WellSummarizer):
+class WellSummarizerPandas(WellSummarizer):
     def summarize(self, dodisplay = False):
         
         summary = pd.DataFrame(index = [self.well.uwi])
@@ -160,3 +160,38 @@ class WellSummarizerLong(WellSummarizer):
         else:
             return summary_0 + summary_1 + summary_2 + summary_3 + \
                 summary_4 + summary_5
+                
+class WellIPRSummarizerPandas(WellSummarizer):
+    '''
+    summarize well IPR data
+    '''
+    def summarize(self
+                  ):
+        d = pd.DataFrame([])
+
+        
+        if self.well.ipr.b is not None:
+            d.loc[self.well.uwi, 'b'] = self.well.ipr.b
+            
+        if self.well.ipr.c is not None:
+            d.loc[self.well.uwi, 'c'] = self.well.ipr.c
+            
+        if self.well.ipr.measurement_depth is not None:
+            d.loc[self.well.uwi, 'meas. depth [m]'] = self.well.ipr.measurement_depth
+            
+        if self.well.ipr.description is not None:
+            d.loc[self.well.uwi, 'description'] = self.well.ipr.description
+            
+        if self.well.ipr.origin is not None:
+            d.loc[self.well.uwi, 'origin'] = self.well.ipr.origin
+            
+        if self.well.ipr.range_certain is not None:
+            d.loc[self.well.uwi, 'range certain [l/s from'] = self.well.ipr.range_certain[0]
+            d.loc[self.well.uwi, 'range certain [l/s to'] = self.well.ipr.range_certain[1]
+        
+        if self.well.ipr.range_uncertain is not None:
+            d.loc[self.well.uwi, 'range uncertain [l/s] from'] = self.well.ipr.range_uncertain[0]
+            d.loc[self.well.uwi, 'range uncertain [l/s] to'] = self.well.ipr.range_uncertain[1]
+        
+            
+        return d

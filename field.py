@@ -12,6 +12,7 @@ from collections.abc import Iterable
 #local application import
 from resy.well import Well
 from resy.plotter.FieldPlotter import *
+from resy.summarizer.FieldSummarizer import *
 
 class Field():
     '''
@@ -229,29 +230,26 @@ class Field():
         
         return ax
             
-    def summary(self, sumtype: str = 'short'):
+    def summary(self, sumtype: str = 'general'):
         '''
         creates a summary of all field data.
 
         Parameters
         ----------
         sumtype : str, optional
-            'short' for a pd.DataFrame with the most 
-            important well data. 'long' for a long description
+            'general' for a pd.DataFrame with the most 
+            important well data.
+            'ipr' for IPR data
+            TODO 'pta' for PTA data
             of all wells. The default is 'short'.
 
         '''
-        if sumtype == 'long':
-            s = ''
-            for well in self.wells:
-                s += well.summary(sumtype = 'long')
-            return s
+        summaries = {'general': FieldGeneralWellSummarizer,
+                     'ipr': FieldIPRSummarizer}
         
-        elif sumtype == 'short':
-            d = pd.DataFrame([])
-            for well in self.wells:
-                d = d.append(well.summary('short'))
-            return d
-        else:
-            raise ValueError('Summary type not available')
-            
+        if sumtype not in summaries:
+            raise ValueError('Summary type ' + sumtype + ' not available')
+        
+        summarizer = summaries[sumtype](self)
+        
+        return summarizer.summarize()
