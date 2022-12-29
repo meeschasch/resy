@@ -19,8 +19,7 @@ from resy.survey import Survey
 import resy.calculator.WellCalculator as WellCalculator
 from resy.plotter.WellPlotter import *
 import resy.summarizer as summarizer
-from resy.ipr import IPR
-from resy.hydraulic_characterisation import PTA
+from resy.hydraulic_characterisation import PTA, IPR
 
 class Well():
     '''
@@ -28,7 +27,7 @@ class Well():
     '''
     
     def __init__(self, uwi, name = None, casing_design = None, survey = None, 
-                 welltops: dict = None, ipr: IPR = None, pta = None,
+                 welltops: dict = None, ipr: IPR = None, pta : PTA = None,
                  T_res = None, p_res = None, p_regr = None, 
                  S = None, k = 3e-5, welltype = 'prod', z_ESP = None):
         '''

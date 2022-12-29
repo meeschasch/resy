@@ -24,26 +24,6 @@ class FieldSummarizer(ABC):
         '''
         ...   
         
-class FieldWellSummarizerPandas(FieldSummarizer):
-    '''
-    collects a summary from all wells (as pd.DataFrames 
-    and joines them into one DataFrame
-    '''
-    def summarize(self, sumtype):
-        summarizers = {'general': WellSummarizerPandas,
-                       'ipr': WellIPRSummarizerPandas}
-        
-        if sumtype not in summarizers:
-            raise ValueError('Summary type ' + sumtype + ' not available')
-        
-        #get summary from all wells and join them together
-        d = pd.DataFrame([])
-        for well in self.field.wells:
-            summarizer = summarizers[sumtype](well)
-            
-            d = d.append(summarizer.summarize())
-            
-        return d
     
 class FieldGeneralWellSummarizer(FieldSummarizer):
     '''
@@ -52,7 +32,7 @@ class FieldGeneralWellSummarizer(FieldSummarizer):
     def summarize(self):
         d = pd.DataFrame([])
         for well in self.field.wells:
-            d = d.append(well.summary('short'))
+            d = d.append(WellIPRSummarizerPandas(welli).summarize())
         return d
     
 class FieldIPRSummarizer(FieldSummarizer):
@@ -66,3 +46,15 @@ class FieldIPRSummarizer(FieldSummarizer):
             d = d.append(WellIPRSummarizerPandas(welli).summarize())
         
         return d
+    
+class FieldPTASummarizer(FieldSummarizer):
+    '''
+    summarize PTA data of all wells
+    '''
+    def summarize(self):
+        d = pd.DataFrame([])
+        
+        for welli in self.field.wells:
+            d = d.append(WellPTASummarizerPandas(welli).summarize())
+        
+        return d 

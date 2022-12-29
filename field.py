@@ -245,7 +245,8 @@ class Field():
 
         '''
         summaries = {'general': FieldGeneralWellSummarizer,
-                     'ipr': FieldIPRSummarizer}
+                     'ipr': FieldIPRSummarizer,
+                     'pta': FieldPTASummarizer}
         
         if sumtype not in summaries:
             raise ValueError('Summary type ' + sumtype + ' not available')

@@ -165,8 +165,7 @@ class WellIPRSummarizerPandas(WellSummarizer):
     '''
     summarize well IPR data
     '''
-    def summarize(self
-                  ):
+    def summarize(self):
         d = pd.DataFrame([])
 
         
@@ -194,4 +193,28 @@ class WellIPRSummarizerPandas(WellSummarizer):
             d.loc[self.well.uwi, 'range uncertain [l/s] to'] = self.well.ipr.range_uncertain[1]
         
             
+        return d
+    
+class WellPTASummarizerPandas(WellSummarizer):
+    '''
+    summarzie well PTA data
+    '''
+    def summarize(self):
+        d = pd.DataFrame([])
+        
+        results = {'Transmissivity [m2/s]':  self.well.pta.transmissivity,
+                   'Storativity [-]':        self.well.pta.storativity,
+                   'Transmissibility [mDm]': self.well.pta.transmissibility,
+                   'Porosity thickness [m]': self.well.pta.porosity_thickness,
+                   'Skin [-]':               self.well.pta.skin,
+                   'Skin type':              self.well.pta.skin_type,
+                   'WBS type':               self.well.pta.wbs_type,
+                   'Reservoir model':        self.well.pta.reservoir_model,
+                   'M = D (comp. reservoir': self.well.pta.m_d_comp}
+        
+
+        for resi in results:
+            if results[resi] is not None:
+                d.loc[self.well.uwi, resi] = results[resi]
+                      
         return d
