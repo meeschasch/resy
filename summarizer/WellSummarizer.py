@@ -25,39 +25,68 @@ class WellSummarizer(ABC):
         '''
         ...
         
-class WellSummarizerPandas(WellSummarizer):
-    def summarize(self, dodisplay = False):
+class WellSummarizerPandas(WellSummarizer, ABC):
+    '''
+    composes a pd.DataFrame of predefined column sets
+    '''
         
-        summary = pd.DataFrame(index = [self.well.uwi])
+    def summarize(self):
         
-        #compose dataframe
-        summary.loc[self.well.uwi, 'p_res [bara]'] = self.well.p_res
-        summary.loc[self.well.uwi, 'T_res [°C]'] = self.well.T_res
-        summary.loc[self.well.uwi, 'b'] = self.well.ipr.b
-        summary.loc[self.well.uwi, 'c'] = self.well.ipr.c
-        summary.loc[self.well.uwi, 'S [mg/l]'] = self.well.S
+        d = pd.DataFrame([])
+
+        for resi in self.results:
+            if self.results[resi] is not None:
+                d.loc[self.well.uwi, resi] = self.results[resi]
+                
+        return d
+    
+class WellIPRSummarizerPandas(WellSummarizerPandas):
+    def __init__(self, well):
+        super().__init__(well)
+         
+        self.results = {'b [bar / l/s':           self.well.ipr.b,
+                    'c' :                         self.well.ipr.c,
+                    'meas. depth [m]':            self.well.ipr.measurement_depth,
+                    'description':                self.well.ipr.description,
+                    'origin':                     self.well.ipr.origin}
         
-        if 'surface' in self.well.welltops:
-            summary.loc[self.well.uwi, 'GOK [mNN]'] = (self.well
-            .welltops['surface'].z_NN)
+        if self.well.ipr.range_certain is not None:
+            self.results['range certain [l/s from'] = self.well.ipr.range_certain[0]
+            self.results['range certain [l/s to'] = self.well.ipr.range_certain[1]
+            
+        if self.well.ipr.range_uncertain is not None:
+            self.results['range uncertain [l/s from'] = self.well.ipr.range_uncertain[0]
+            self.results['range uncertain [l/s to'] = self.well.ipr.range_uncertain[1]
+
+class WellPTASummarizerPandas(WellSummarizerPandas):
+    def __init__(self, well):
+        super().__init__(well)
+        
+        self.results = {'Transmissivity [m2/s]':  self.well.pta.transmissivity,
+                   'Storativity [-]':        self.well.pta.storativity,
+                   'Transmissibility [mDm]': self.well.pta.transmissibility,
+                   'Porosity thickness [m]': self.well.pta.porosity_thickness,
+                   'Skin [-]':               self.well.pta.skin,
+                   'Skin type':              self.well.pta.skin_type,
+                   'WBS type':               self.well.pta.wbs_type,
+                   'Reservoir model':        self.well.pta.reservoir_model,
+                   'M = D (comp. reservoir': self.well.pta.m_d_comp}
+           
+class WellGeneralSummarizerPandas(WellSummarizerPandas):
+    def __init__(self, well):
+        super().__init__(well)
+        
+        self.results = {'Name':             self.well.name,
+                        'P_Res [bara]':     self.well.p_res,
+                        'T_Res [°C]':       self.well.p_res,
+                        'Salinity [mg/l]':  self.well.S,
+                        }
         
         if 'top reservoir' in self.well.welltops:
-            summary.loc[self.well.uwi, 'Top Reservoir [m TVD]'] = (self.well
-            .welltops['top reservoir'].z_TVD)
-            
-        if self.well.pta.transmissivity is not None:
-            summary.loc[self.well.uwi, 'Transmissivity [m2/s]'] = self.well.pta.transmissivity
-            
-        if self.well.pta.poro is not None:
-             summary.loc[self.well.uwi, 'Porosity [m2/s]'] = self.well.pta.poro
-             
-        if self.well.ipr.origin is not None:
-            summary.loc[self.well.uwi, 'IPR Origin'] = self.well.ipr.origin
-            
-        if dodisplay:
-            display(summary)
-        else:
-            return summary
+            self.results['TR [m TVD]'] = \
+                         self.well.welltops['top reservoir'].z_TVD
+            self.results['TR X'] = self.well.welltops['top reservoir'].x
+            self.results['TR Y'] = self.well.welltops['top reservoir'].y
     
 class WellSummarizerLong(WellSummarizer):
     def summarize(self, dodisplay = False) -> str:
@@ -160,61 +189,3 @@ class WellSummarizerLong(WellSummarizer):
         else:
             return summary_0 + summary_1 + summary_2 + summary_3 + \
                 summary_4 + summary_5
-                
-class WellIPRSummarizerPandas(WellSummarizer):
-    '''
-    summarize well IPR data
-    '''
-    def summarize(self):
-        d = pd.DataFrame([])
-
-        
-        if self.well.ipr.b is not None:
-            d.loc[self.well.uwi, 'b'] = self.well.ipr.b
-            
-        if self.well.ipr.c is not None:
-            d.loc[self.well.uwi, 'c'] = self.well.ipr.c
-            
-        if self.well.ipr.measurement_depth is not None:
-            d.loc[self.well.uwi, 'meas. depth [m]'] = self.well.ipr.measurement_depth
-            
-        if self.well.ipr.description is not None:
-            d.loc[self.well.uwi, 'description'] = self.well.ipr.description
-            
-        if self.well.ipr.origin is not None:
-            d.loc[self.well.uwi, 'origin'] = self.well.ipr.origin
-            
-        if self.well.ipr.range_certain is not None:
-            d.loc[self.well.uwi, 'range certain [l/s from'] = self.well.ipr.range_certain[0]
-            d.loc[self.well.uwi, 'range certain [l/s to'] = self.well.ipr.range_certain[1]
-        
-        if self.well.ipr.range_uncertain is not None:
-            d.loc[self.well.uwi, 'range uncertain [l/s] from'] = self.well.ipr.range_uncertain[0]
-            d.loc[self.well.uwi, 'range uncertain [l/s] to'] = self.well.ipr.range_uncertain[1]
-        
-            
-        return d
-    
-class WellPTASummarizerPandas(WellSummarizer):
-    '''
-    summarzie well PTA data
-    '''
-    def summarize(self):
-        d = pd.DataFrame([])
-        
-        results = {'Transmissivity [m2/s]':  self.well.pta.transmissivity,
-                   'Storativity [-]':        self.well.pta.storativity,
-                   'Transmissibility [mDm]': self.well.pta.transmissibility,
-                   'Porosity thickness [m]': self.well.pta.porosity_thickness,
-                   'Skin [-]':               self.well.pta.skin,
-                   'Skin type':              self.well.pta.skin_type,
-                   'WBS type':               self.well.pta.wbs_type,
-                   'Reservoir model':        self.well.pta.reservoir_model,
-                   'M = D (comp. reservoir': self.well.pta.m_d_comp}
-        
-
-        for resi in results:
-            if results[resi] is not None:
-                d.loc[self.well.uwi, resi] = results[resi]
-                      
-        return d

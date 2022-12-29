@@ -22,39 +22,77 @@ class FieldSummarizer(ABC):
         '''
         returns a pd.DataFrame with all well properties
         '''
-        ...   
+        ...  
+    
+#%% Long string summarizer    
+class FieldWellLongSummarizer(FieldSummarizer):
+    '''
+    output the long string summary of each well in the field
+    '''
+    def summarize(self):
+        s = ''
+        for welli in self.field.wells:
+            s += WellSummarizerLong(welli).summarize()
         
-    
-class FieldGeneralWellSummarizer(FieldSummarizer):
-    '''
-    summarize general well data
-    '''
+        return s
+        
+#%% Pandas summarizer 
+class FieldWellSummarizerPandas(FieldSummarizer, ABC):
+    def __init__(self, field):
+        '''
+        composes a pd.DataFrame of all single well pandas summaries.
+        Sublasses just need to set self.summarizer to a WellSummarizerPandas
+        class.
+
+        Parameters
+        ----------
+        field : FIELD.
+        sumtpye : str
+            for available sumtypes, see documentation 
+            of class WellSummarizerPandas.
+
+        Returns
+        -------
+        None.
+
+        '''
+        super().__init__(field)
+        
     def summarize(self):
-        d = pd.DataFrame([])
-        for well in self.field.wells:
-            d = d.append(WellIPRSummarizerPandas(welli).summarize())
-        return d
-    
-class FieldIPRSummarizer(FieldSummarizer):
-    '''
-    summarize IPR data of all wells
-    '''
-    def summarize(self):
+        #get pandas one-line summary of each well and append together
         d = pd.DataFrame([])
         
         for welli in self.field.wells:
-            d = d.append(WellIPRSummarizerPandas(welli).summarize())
-        
+            d = d.append(self.summarizer(welli).summarize())
+            
         return d
     
-class FieldPTASummarizer(FieldSummarizer):
+class FieldGeneralWellSummarizer(FieldWellSummarizerPandas):
     '''
-    summarize PTA data of all wells
+    inherits from FieldWellSummarizerPandas, sets self.summarizer
+    toWellGeneralSummarizerPandas
     '''
-    def summarize(self):
-        d = pd.DataFrame([])
+    def __init__(self, field):
+        super().__init__(field)
         
-        for welli in self.field.wells:
-            d = d.append(WellPTASummarizerPandas(welli).summarize())
+        self.summarizer = WellGeneralSummarizerPandas
         
-        return d 
+class FieldIPRWelllSummarizer(FieldWellSummarizerPandas):
+    '''
+    inherits from FieldWellSummarizerPandas, sets self.summarizer
+    WellIPRSummarizerPandas
+    '''
+    def __init__(self, field):
+        super().__init__(field)
+        
+        self.summarizer = WellIPRSummarizerPandas
+
+class FieldPTAWelllSummarizer(FieldWellSummarizerPandas):
+    '''
+    inherits from FieldWellSummarizerPandas, sets self.summarizer
+    WellPTASummarizerPandas
+    '''
+    def __init__(self, field):
+        super().__init__(field)
+        
+        self.summarizer = WellPTASummarizerPandas    

@@ -14,9 +14,8 @@ import numpy as np
 from resy.well import Well
 from resy.field import Field
 from resy.welltop import Welltop
-from resy.ipr import IPR
 from resy.casing_design import CasingDesign
-from resy.hydraulic_characterisation import PTA
+from resy.hydraulic_characterisation import PTA, IPR
 
 class DataLoader(ABC):
     '''

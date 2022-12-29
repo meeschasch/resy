@@ -240,17 +240,36 @@ class Field():
             'general' for a pd.DataFrame with the most 
             important well data.
             'ipr' for IPR data
-            TODO 'pta' for PTA data
-            of all wells. The default is 'short'.
+            'pta' for PTA data
+            The default is 'general'.
 
         '''
-        summaries = {'general': FieldGeneralWellSummarizer,
-                     'ipr': FieldIPRSummarizer,
-                     'pta': FieldPTASummarizer}
+        summarizers = {'general': FieldGeneralWellSummarizer,
+                     'ipr': FieldIPRWelllSummarizer,
+                     'pta': FieldPTAWelllSummarizer,
+                     'long': FieldWellLongSummarizer}
         
-        if sumtype not in summaries:
+        if sumtype not in summarizers:
             raise ValueError('Summary type ' + sumtype + ' not available')
         
-        summarizer = summaries[sumtype](self)
+        summarizer = summarizers[sumtype](self)
         
         return summarizer.summarize()
+    
+    def correlate(variables):
+        '''
+        correlate two variables across all field wells
+
+        Parameters
+        ----------
+        variables : array
+            array containing the variable names that should be correlated.
+            To date, exactly two variables are accepted.
+
+        Returns
+        -------
+        None.
+
+        '''
+        #TODO
+    
