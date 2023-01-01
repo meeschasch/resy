@@ -189,13 +189,13 @@ class HydraulikDBLoader(DataLoader):
         d_pta = (d_pta.loc[d_pta.chk == 1])
                
         for i, welli in d_pta.iterrows():
-            pta = PTA(perm = welli['Permeabilität'],
-                                   poro = welli['Porosität'],
+            pta = PTA(k = welli['Permeabilität'],
+                                   phi = welli['Porosität'],
                                    aquifer_thickness = welli['Mächtigkeit Auswertung'],
-                                   transmissibility = welli['Transmissibilität'],
-                                   transmissivity = welli['Transmissivität'],
-                                   porosity_thickness = welli['Porosität x Mächtigkeit'],
-                                   storativity = welli['Speicherkoeffizient'],
+                                   kh = welli['Transmissibilität'],
+                                   Kh = welli['Transmissivität'],
+                                   phih = welli['Porosität x Mächtigkeit'],
+                                   Sc = welli['Speicherkoeffizient'],
                                    m_d_comp = welli['M=D'],
                                    skin = welli['Skin/Skin0'])
             

@@ -62,10 +62,10 @@ class WellPTASummarizerPandas(WellSummarizerPandas):
     def __init__(self, well):
         super().__init__(well)
         
-        self.results = {'Transmissivity [m2/s]':  self.well.pta.transmissivity,
-                   'Storativity [-]':        self.well.pta.storativity,
-                   'Transmissibility [mDm]': self.well.pta.transmissibility,
-                   'Porosity thickness [m]': self.well.pta.porosity_thickness,
+        self.results = {'Transmissivity [m2/s]':  self.well.pta.Kh,
+                   'Storativity [-]':        self.well.pta.Sc,
+                   'Transmissibility [mDm]': self.well.pta.kh,
+                   'Porosity thickness [m]': self.well.pta.phih,
                    'Skin [-]':               self.well.pta.skin,
                    'Skin type':              self.well.pta.skin_type,
                    'WBS type':               self.well.pta.wbs_type,

@@ -11,12 +11,12 @@ class PTA():
     '''
     pressure transient analysis
     '''
-    def __init__(self, perm :float = None, poro:float = None,
+    def __init__(self, k :float = None, phi:float = None,
                  aquifer_thickness:float = None,
-                 transmissibility:float = None,
-                 porosity_thickness:float = None, 
-                 transmissivity:float = None, 
-                 storativity:float= None, 
+                 kh:float = None,
+                 phih:float = None, 
+                 Kh:float = None, 
+                 Sc:float= None, 
                  skin: float = None,
                  wbs_type:str = None, well_model:str = None,
                  skin_type:str = None, 
@@ -27,19 +27,19 @@ class PTA():
 
         Parameters
         ----------
-        perm : float, optional
+        k : float, optional
             permeability [mD]. The default is None.
-        poro : float, optional
+        phi : float, optional
             porosity []. The default is None.
         aquifer_thickness : float, optional
             aquifer thickness [m]. The default is None.
-        transmissibility : float, optional
+        kh : float, optional
             transmissibility [mD m]. The default is None.
-        porosity_thickness : float, optional
+        phih : float, optional
             porosity thickness [m]. The default is None.
-        transmissivity : float, optional
+        Kh : float, optional
             transmissivity [m2/s]. The default is None.
-        storativity : float, optional
+        Sc : float, optional
             storativity [-]. The default is None.
         skin: float, optional
             skin
@@ -62,13 +62,13 @@ class PTA():
         None.
 
         '''
-        self.perm = perm
-        self.poro = poro
+        self.k = k
+        self.phi = phi
         self.aquifer_thickness = aquifer_thickness
-        self.transmissibility = transmissibility
-        self.transmissivity = transmissivity
-        self.porosity_thickness = porosity_thickness
-        self.storativity = storativity
+        self.kh = kh
+        self.Kh = Kh
+        self.phih = phih
+        self.Sc = Sc
         self.wbs_type = wbs_type
         self.well_model = well_model
         self.skin_type = skin_type
