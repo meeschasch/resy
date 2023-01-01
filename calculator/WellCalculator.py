@@ -7,10 +7,7 @@ Created on Tue Oct 11 22:44:21 2022
 """
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-#from resy import reseng_2101 as res
 import sys
-sys.path.append(r'C:\Users\Schweingruber.Misc\Documents\GitHub\reseng\Bibliotheken')
-#import reseng_2101 as res
 
 
 
@@ -19,7 +16,13 @@ class WellCalculator(ABC):
     ABC for all calculator classes
     '''
     def __init__(self, well):
-        from resy import Well #avoid circular import
+        #get location of reslib from config and import module
+        from resy.config import config
+        sys.path.append(config.get('Packages', 'reslib'))
+        import reseng_2101
+        
+        #avoid circular import (TODO: solve this more elegantly...)
+        from resy import Well 
         self.well = well
         
 

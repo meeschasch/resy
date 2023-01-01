@@ -116,12 +116,4 @@ class MplWellIPRPlotter(MplWellPlotterABC):
         return self.ax
     
 
-# class Well3dPathPlotter(WellVisualizer):
-#     '''
-#     Creates a 3D plot of the wellpath along with all welltops
-#     '''
-#     def plot(self):
-#         #TODO
-#         ...
-        
     

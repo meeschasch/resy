@@ -16,13 +16,14 @@ from resy.field import Field
 from resy.welltop import Welltop
 from resy.casing_design import CasingDesign
 from resy.hydraulic_characterisation import PTA, IPR
+import resy.config
 
 class DataLoader(ABC):
     '''
     abstractr base class for any class that loads data
     '''
     def __init__(self, field: Field) -> None:
-        self.hdb_file = r'/Users/mischasch/Documents/GitHub/Notebooks/HydraulikdatenbankSWM.xlsx'
+        
         self.field = field
         
     @abstractmethod
@@ -31,10 +32,17 @@ class DataLoader(ABC):
         
 class HydraulikDBLoader(DataLoader):
     '''
-    loads all data from the SWM Hydraulikdatenbank at
-    I:\Projekte\SW-ER-PG\FG Reservoir\(05) Reservoir Engineering\Datensammlung\neu\HydraulikdatenbankSWM.xlsx
+    loads all data from the SWM Hydraulikdatenbank from the path provided with 
+    the HydraulikDB keyword of the config.ini
     
     '''
+    def __init__(self, field):
+        super().__init__(field)
+        
+        #import config for location of HydraulikDB file
+        from resy.config import config
+        self.hdb_file = config.get('DataLoader', 'HydraulikDB')
+
     def load(self):       
         #file = r'I:\Projekte\SW-ER-PG\FG Reservoir\(05) Reservoir Engineering\Datensammlung\neu\HydraulikdatenbankSWM.xlsx'
         
@@ -212,7 +220,11 @@ class SurveyLoader(DataLoader):
         
         pass
     
-class CasingDesignLoader(DataLoader):
+class CasingDesignLoader(HydraulikDBLoader):
+    '''
+    imnport casing design. Inherits from HydraulikDBLoader because the casing
+    design is stored in the same excel file
+    '''
     def load(self):
         '''
         #TODO
