@@ -25,7 +25,4 @@ config = configparser.ConfigParser()
 #get containing directory of config.py
 path_to_ini = Path(os.path.abspath(__file__)).parent / 'config.ini'
 
-print('Im running!')
-#print('CWD: ', os.path.abspath(__file__))
 config.read(path_to_ini)
-print(config.sections())
