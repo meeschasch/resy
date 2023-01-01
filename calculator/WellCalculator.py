@@ -20,9 +20,7 @@ class WellCalculator(ABC):
         from resy.config import config
         sys.path.append(config.get('Packages', 'reslib'))
         import reseng_2101
-        
-        #avoid circular import (TODO: solve this more elegantly...)
-        from resy import Well 
+
         self.well = well
         
 
